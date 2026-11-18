@@ -1,0 +1,18 @@
+# 이 파일을 application-local.yml로 복사한 뒤 값을 채우세요. (application-local.yml은 깃에 올리지 않음)
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/nadeuri?createDatabaseIfNotExist=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: your-db-user
+    password: "your-db-password"
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+kma:
+  service-key: "공공데이터포털 Decoding 인증키"
+
+kakao:
+  javascript-key: "카카오 JavaScript 키"
+  # 카카오 로그인 (플랫폼 키 > REST API 키, 같은 화면의 클라이언트 시크릿)
+  rest-api-key: "카카오 REST API 키"
+  client-secret: "카카오 클라이언트 시크릿"

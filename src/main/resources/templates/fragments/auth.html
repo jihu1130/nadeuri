@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- 상단바 오른쪽: 로그인 상태 표시 (ViewModelAdvice가 loginUser를 넣어 줌) -->
+<div th:fragment="auth" class="auth">
+  <th:block th:if="${loginUser}">
+    <img th:if="${loginUser.profileImageUrl}" th:src="${loginUser.profileImageUrl}" class="avatar" alt=""
+         referrerpolicy="no-referrer">
+    <span class="nickname" th:text="${loginUser.nickname}">닉네임</span>
+    <!-- 로그아웃은 CSRF 토큰이 필요해서 POST 폼으로 보낸다 (th:action이 토큰을 자동으로 넣음) -->
+    <form method="post" th:action="@{/logout}" class="inline">
+      <button type="submit" class="link-btn">로그아웃</button>
+    </form>
+  </th:block>
+  <a th:unless="${loginUser}" th:href="@{/login}" class="link-btn">로그인</a>
+</div>
+</body>
+</html>

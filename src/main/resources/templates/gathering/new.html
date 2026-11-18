@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>모임 만들기 - 나들이</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <link rel="stylesheet" th:href="@{/css/weather-picker.css}">
+</head>
+<body class="form-page">
+<header class="topbar">
+  <a href="/" class="logo"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 10.2c0 5.1-7 11-7 11s-7-5.9-7-11a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></span><span>나들이</span></a>
+  <div th:replace="~{fragments/auth :: auth}"></div>
+</header>
+
+<div class="container">
+  <div class="page-heading"><p class="eyebrow">모임 등록</p><h1>새 모임 만들기</h1><p class="page-intro">이름·활동·시간·장소·정원을 입력하면 주변 모임 검색에 등록됩니다.</p></div>
+
+  <div class="errors" th:if="${errors}">
+    <p th:each="e : ${errors}" th:text="${e.defaultMessage}"></p>
+  </div>
+
+  <form method="post" th:action="@{/gatherings}" class="card">
+    <label for="title">모임 이름</label>
+    <input id="title" name="title" required maxlength="100" placeholder="예) 한강 노을 피크닉">
+
+    <label for="tag">활동 종류</label>
+    <select id="tag" name="tag" required>
+      <option th:each="t : ${tags}" th:value="${t.name()}" th:text="${t.emoji + ' ' + t.label}"></option>
+    </select>
+
+    <!-- 날씨를 보면서 날짜·시간 고르기. 실제로 서버에 보내는 값은 숨은 칸 startAt (예: 2026-11-19T15:30) -->
+    <label id="startAtLabel">시작 시간 <span class="field-help-inline">한국 시간</span></label>
+    <input type="hidden" id="startAt" name="startAt" required>
+    <div class="wx-picker" aria-labelledby="startAtLabel">
+      <div class="wx-source">
+        <span id="wxSource">날씨 기준: 지도 중심</span>
+        <span id="wxRange" class="wx-range"></span>
+      </div>
+
+      <div class="wx-days-wrap">
+        <div class="wx-days" id="wxDays" role="group" aria-label="날짜 선택"></div>
+      </div>
+      <div class="wx-far">
+        <button type="button" class="wx-far-toggle" id="wxFarToggle">더 먼 날짜 선택</button>
+        <input type="date" id="wxFarDate" aria-label="더 먼 날짜" hidden>
+      </div>
+
+      <div class="wx-hours-wrap" id="wxHoursWrap">
+        <div class="wx-hours" id="wxHours" role="group" aria-label="시간 선택"></div>
+      </div>
+
+      <div class="wx-minutes" role="group" aria-label="분 선택">
+        <span class="wx-minutes-label">분</span>
+        <button type="button" data-minute="0" aria-pressed="true">00</button>
+        <button type="button" data-minute="15" aria-pressed="false">15</button>
+        <button type="button" data-minute="30" aria-pressed="false">30</button>
+        <button type="button" data-minute="45" aria-pressed="false">45</button>
+      </div>
+
+      <div class="wx-summary" id="wxSummary" aria-live="polite"></div>
+    </div>
+
+    <label for="maxPeople">최대 인원</label>
+    <input id="maxPeople" name="maxPeople" type="number" min="2" max="50" value="6" required>
+    <p class="field-help">주최자를 포함한 총 인원입니다. 2명부터 50명까지 설정할 수 있습니다.</p>
+
+    <label for="placeSearch">장소</label>
+    <div class="search-row">
+      <input id="placeSearch" type="search" placeholder="장소 검색 (예: 여의도 한강공원)" autocomplete="off">
+      <button type="button" class="btn secondary" id="searchBtn">검색</button>
+    </div>
+    <ul id="searchResults" class="search-results"></ul>
+    <div class="pick-map-wrap">
+      <div id="pickMap"></div>
+      <!-- 지도를 내 위치로 옮기는 버튼 (type=button 이라 폼을 제출하지 않음) -->
+      <button type="button" class="map-locate-button" id="pickLocateButton" aria-label="지도를 내 위치로 이동" title="내 위치로 이동">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>
+          <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>
+        </svg>
+      </button>
+      <div id="pickMapToast" class="map-toast" role="status" aria-live="polite" hidden></div>
+    </div>
+    <p class="field-help">검색 결과를 선택하거나 지도에서 모임 장소를 클릭하세요.</p>
+    <label class="visually-hidden" for="placeName">모임 장소 이름</label>
+    <input id="placeName" name="placeName" required placeholder="모임 장소 이름">
+    <input type="hidden" id="latitude" name="latitude">
+    <input type="hidden" id="longitude" name="longitude">
+
+    <label for="description">모임 설명 <span class="field-help-inline">선택</span></label>
+    <textarea id="description" name="description" rows="4" maxlength="1000" placeholder="준비물이나 만날 위치를 적어 주세요."></textarea>
+
+    <div class="form-actions">
+      <button class="btn" type="submit">모임 등록</button>
+      <a class="btn secondary" href="/">취소</a>
+    </div>
+  </form>
+</div>
+
+<script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},libraries='services',autoload=false)}"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ===== 날씨 보며 날짜·시간 고르기 =====
+   * 날짜 줄(14일) → 시간 줄(0~23시, 기온 그래프 + 강수확률) → 분(00/15/30/45) → 요약
+   * 예보는 /api/weather/forecast (기상청 단기예보, 대략 3~4일 뒤까지). 그 뒤 날짜도 고를 수 있지만 "예보 없음".
+   */
+  const weatherPicker = (() => {
+    const DAYS_SHOWN = 14;
+    const HOUR_W = 58;                       // 시간 칸 너비(px) — CSS .wx-hour 와 같아야 함
+    const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
+    const pad = n => String(n).padStart(2, '0');
+    const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const hourLabel = h => h === 0 ? '오전 12시' : h < 12 ? `오전 ${h}시` : h === 12 ? '오후 12시' : `오후 ${h - 12}시`;
+
+    let forecast = { available: false, days: [] };
+    let byDate = {};                         // 'YYYY-MM-DD' → day
+    let loadedKey = null, requestNo = 0;
+
+    // 기본값: 2시간 뒤 정시
+    const init = new Date(Date.now() + 2 * 3600e3); init.setMinutes(0, 0, 0);
+    let sel = { date: ymd(init), hour: init.getHours(), minute: 0 };
+
+    function dateOf(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+    function selectedDateTime() { const d = dateOf(sel.date); d.setHours(sel.hour, sel.minute, 0, 0); return d; }
+    let byTime = new Map();                  // 정시(ms) → 시간별 예보 (날짜 경계를 넘어 찾기 위해)
+    const HOUR_MS = 3600e3;
+    function slotTime(dateStr, hour) { const d = dateOf(dateStr); d.setHours(hour, 0, 0, 0); return d.getTime(); }
+    function hourInfo(dateStr, hour) {
+      return byTime.get(slotTime(dateStr, hour)) || null;
+    }
+    /**
+     * 그 시각의 예보. 정확한 값이 없으면 1시간 앞뒤 값을 "근처 예보"로 쓴다.
+     * - 지금 이 시간: 이번 발표는 다음 정시부터 나와서 바로 다음 시간 값을 씀
+     * - 4일 뒤처럼 3시간 간격인 날: 사이 시간은 가장 가까운 값을 씀
+     * @returns {{info, approx}|null} null이면 정말 알 수 없음
+     */
+    function forecastFor(dateStr, hour) {
+      const t = slotTime(dateStr, hour);
+      if (byTime.has(t)) return { info: byTime.get(t), approx: false };
+      const near = byTime.get(t + HOUR_MS) || byTime.get(t - HOUR_MS);
+      return near ? { info: near, approx: true } : null;
+    }
+    // 예보가 몇 시간뿐인 날(예보 범위의 끝)은 하루 요약을 믿을 수 없으니 따로 표시한다
+    const FEW_HOURS = 4;
+    function dayName(d) {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const diff = Math.round((d - today) / 86400e3);
+      return diff === 0 ? '오늘' : diff === 1 ? '내일' : diff === 2 ? '모레' : WEEK[d.getDay()];
+    }
+
+    async function load(lat, lng, sourceLabel) {
+      $('wxSource').textContent = `날씨 기준: ${sourceLabel}`;
+      const key = `${(+lat).toFixed(2)},${(+lng).toFixed(2)}`;  // 약 1km 안은 같은 예보
+      if (key === loadedKey) return;
+      loadedKey = key;
+      const no = ++requestNo;
+      $('wxRange').textContent = '예보 불러오는 중…';
+      try {
+        const r = await fetch(`/api/weather/forecast?lat=${lat}&lng=${lng}`);
+        if (!r.ok) throw new Error();
+        const data = await r.json();
+        if (no !== requestNo) return;
+        forecast = data;
+      } catch {
+        if (no !== requestNo) return;
+        forecast = { available: false, days: [] };
+        loadedKey = null;
+      }
+      byDate = Object.fromEntries(forecast.days.map(d => [d.date, d]));
+      byTime = new Map(forecast.days.flatMap(d => d.hours).map(h => [new Date(h.time).getTime(), h]));
+      if (forecast.available && forecast.forecastUntil) {
+        const u = new Date(forecast.forecastUntil);
+        $('wxRange').textContent = `예보는 ${u.getMonth() + 1}월 ${u.getDate()}일 ${hourLabel(u.getHours())}까지 있어요`;
+      } else {
+        $('wxRange').textContent = '지금은 예보를 불러올 수 없어요';
+      }
+      render();
+    }
+
+    function renderDays() {
+      const box = $('wxDays');
+      box.innerHTML = '';
+      const start = new Date(); start.setHours(0, 0, 0, 0);
+      const dates = [];
+      for (let i = 0; i < DAYS_SHOWN; i++) { const d = new Date(start); d.setDate(start.getDate() + i); dates.push(d); }
+      // "더 먼 날짜"로 고른 날이 목록 밖이면 끝에 붙인다
+      if (!dates.some(d => ymd(d) === sel.date)) dates.push(dateOf(sel.date));
+
+      dates.forEach(d => {
+        const key = ymd(d);
+        const day = byDate[key];
+        const isToday = key === ymd(new Date());
+        // 오늘이 아닌데 예보가 몇 시간뿐이면(예: 자정 값 하나) 하루 요약 대신 "일부만 예보"
+        const few = day && !isToday && day.hours.length < FEW_HOURS;
+        const known = day && !few;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'wx-day' + (known ? '' : ' no-forecast') + (d.getDay() === 0 ? ' sun' : d.getDay() === 6 ? ' sat' : '');
+        b.setAttribute('aria-pressed', String(key === sel.date));
+        const head = `<span class="wx-day-name">${dayName(d)}</span><span class="wx-day-date">${d.getMonth() + 1}/${d.getDate()}</span>`;
+        b.innerHTML = known
+          ? `${head}<span class="wx-day-icon" aria-hidden="true">${esc(day.emoji)}</span>
+             <span class="wx-day-temp"><b>${Math.round(day.maxTemperature)}°</b> ${Math.round(day.minTemperature)}°</span>
+             <span class="wx-day-pop">💧${day.maxPrecipitationProbability}%</span>`
+          : `${head}<span class="wx-day-icon" aria-hidden="true">❔</span>
+             <span class="wx-day-temp muted">${few ? '일부만 예보' : '예보 없음'}</span><span class="wx-day-pop"></span>`;
+        b.setAttribute('aria-label', `${d.getMonth() + 1}월 ${d.getDate()}일 ${dayName(d)}` +
+          (known ? `, ${day.description}, 최고 ${Math.round(day.maxTemperature)}도 최저 ${Math.round(day.minTemperature)}도, 강수확률 ${day.maxPrecipitationProbability}%`
+                 : few ? ', 일부 시간만 예보 있음' : ', 예보 없음'));
+        b.addEventListener('click', () => {
+          sel.date = key;
+          // 오늘을 고르면 이미 지난 시각은 고를 수 없으니 다음 시각으로 옮긴다
+          if (selectedDateTime() <= new Date()) sel.hour = Math.min(23, new Date().getHours() + 1);
+          render();
+        });
+        box.appendChild(b);
+      });
+      box.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    function renderHours() {
+      const box = $('wxHours');
+      const now = new Date();
+      const temps = [];
+      let html = '';
+      for (let h = 0; h < 24; h++) {
+        const d = dateOf(sel.date); d.setHours(h, 45, 0, 0);       // 그 시간대의 마지막 선택지(45분)까지 지났으면 막는다
+        const past = d <= now;
+        const exact = hourInfo(sel.date, h);
+        if (exact) temps.push({ h, t: exact.temperature });   // 그래프는 실제 예보 값만 잇는다
+        const pressed = h === sel.hour;
+        // 칸 내용: 지난 시간 → 흐린 점 / 실제 예보 / 근처 예보(≈, 흐리게) / 정말 모름 → ❔
+        const f = past ? null : forecastFor(sel.date, h);
+        const info = f?.info;
+        const cls = past ? ' is-past' : !f ? ' no-forecast' : f.approx ? ' approx' : '';
+        const label = past ? ', 지난 시간'
+          : !f ? ', 예보 없음'
+          : `, ${f.approx ? '근처 시간 예보 ' : ''}${info.description} ${Math.round(info.temperature)}도, 강수확률 ${info.precipitationProbability}%`;
+        html += `<button type="button" class="wx-hour${cls}${info?.rainy ? ' rainy' : ''}" data-hour="${h}"
+                   aria-pressed="${pressed}" ${past ? 'disabled' : ''} aria-label="${hourLabel(h)}${label}">
+                   <span class="wx-hour-temp">${info ? (f.approx ? '≈' : '') + Math.round(info.temperature) + '°' : ''}</span>
+                   <span class="wx-hour-icon" aria-hidden="true">${past ? '·' : info ? esc(info.emoji) : '❔'}</span>
+                   <span class="wx-hour-pop">${info ? info.precipitationProbability + '%' : past ? '' : '예보 없음'}</span>
+                   <span class="wx-hour-time">${hourLabel(h)}</span>
+                 </button>`;
+      }
+      // 기온 꺾은선 그래프 (예보가 있는 시간만 잇는다)
+      let svg = '';
+      if (temps.length > 1) {
+        const min = Math.min(...temps.map(p => p.t)), max = Math.max(...temps.map(p => p.t));
+        const y = t => 34 - (max === min ? 0.5 : (t - min) / (max - min)) * 26;
+        const pts = temps.map(p => `${p.h * HOUR_W + HOUR_W / 2},${y(p.t).toFixed(1)}`).join(' ');
+        svg = `<svg class="wx-chart" width="${24 * HOUR_W}" height="40" aria-hidden="true">
+                 <polygon points="${temps[0].h * HOUR_W + HOUR_W / 2},40 ${pts} ${temps[temps.length - 1].h * HOUR_W + HOUR_W / 2},40" class="wx-chart-fill"/>
+                 <polyline points="${pts}" class="wx-chart-line"/>
+               </svg>`;
+      }
+      box.innerHTML = svg + `<div class="wx-hour-row">${html}</div>`;
+      box.querySelectorAll('.wx-hour').forEach(b => b.addEventListener('click', () => { sel.hour = +b.dataset.hour; fixMinute(); render(); }));
+      // 고른 시간이 가운데 오도록 가로 스크롤 (새 칸이 그려진 다음 프레임에, 애니메이션 없이)
+      const wrap = $('wxHoursWrap');
+      requestAnimationFrame(() => wrap.scrollTo({
+        left: Math.max(0, sel.hour * HOUR_W - wrap.clientWidth / 2 + HOUR_W / 2), behavior: 'instant'
+      }));
+    }
+
+    // 고른 시각이 이미 지났으면 같은 시간대의 다음 분으로, 그래도 지났으면 다음 시간으로
+    function fixMinute() {
+      const now = new Date();
+      for (const m of [sel.minute, 0, 15, 30, 45]) {
+        const d = dateOf(sel.date); d.setHours(sel.hour, m, 0, 0);
+        if (d > now) { sel.minute = m; return; }
+      }
+    }
+
+    function renderMinutes() {
+      const now = new Date();
+      document.querySelectorAll('.wx-minutes [data-minute]').forEach(b => {
+        const m = +b.dataset.minute;
+        const d = dateOf(sel.date); d.setHours(sel.hour, m, 0, 0);
+        b.disabled = d <= now;
+        b.setAttribute('aria-pressed', String(m === sel.minute));
+      });
+    }
+
+    function renderSummary() {
+      const dt = selectedDateTime();
+      $('startAt').value = `${sel.date}T${pad(sel.hour)}:${pad(sel.minute)}`;
+      const when = `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${WEEK[dt.getDay()]}) ${hourLabel(sel.hour).replace('시', '')}:${pad(sel.minute)}`;
+      const f = forecastFor(sel.date, sel.hour);
+      const info = f?.info;
+      const box = $('wxSummary');
+      if (dt <= new Date()) {
+        box.className = 'wx-summary warn';
+        box.textContent = `${when} — 이미 지난 시간이에요. 다른 시간을 골라 주세요.`;
+      } else if (info) {
+        box.className = 'wx-summary' + (info.rainy ? ' rainy' : '');
+        box.innerHTML = `<b>${esc(when)}</b><span>${esc(info.emoji)} ${esc(info.description)} ${f.approx ? '약 ' : ''}${Math.round(info.temperature)}° · 강수확률 ${info.precipitationProbability}%</span>`
+          + (info.rainy ? '<span class="wx-summary-note">비·눈 소식이 있어요. 실내 장소나 다른 시간도 생각해 보세요.</span>' : '');
+      } else {
+        box.className = 'wx-summary';
+        box.innerHTML = `<b>${esc(when)}</b><span>❔ <span class="muted">이 시간은 아직 날씨를 알 수 없어요 (기상청 단기예보는 약 4일 뒤까지 나와요)</span></span>`;
+      }
+    }
+
+    function render() { renderDays(); renderHours(); renderMinutes(); renderSummary(); }
+
+    document.querySelectorAll('.wx-minutes [data-minute]').forEach(b =>
+      b.addEventListener('click', () => { sel.minute = +b.dataset.minute; render(); }));
+
+    // 14일보다 먼 날짜: 달력 입력을 펼쳐서 고른다
+    const far = $('wxFarDate');
+    far.min = ymd(new Date());
+    $('wxFarToggle').addEventListener('click', () => { far.hidden = !far.hidden; if (!far.hidden) far.focus(); });
+    far.addEventListener('change', () => { if (far.value) { sel.date = far.value; fixMinute(); render(); } });
+
+    render();
+    return { load };
+  })();
+
+  // 카카오 지도를 못 불러오면 기본 위치(여의도) 날씨라도 보여 준다
+  if (!window.kakao?.maps) weatherPicker.load(37.5283, 126.9294, '기본 위치(여의도)');
+
+  window.kakao?.maps && kakao.maps.load(() => {
+    const map = new kakao.maps.Map($('pickMap'), {
+      center: new kakao.maps.LatLng(37.5283, 126.9294),
+      level: 4
+    });
+    const marker = new kakao.maps.Marker();
+    const places = new kakao.maps.services.Places();
+    const geocoder = new kakao.maps.services.Geocoder();
+    let myPos = null, myOverlay = null, toastTimer = null;
+
+    // 장소를 고르기 전에는 지도 중심 날씨를 보여 준다
+    weatherPicker.load(37.5283, 126.9294, '지도 중심 (장소를 고르면 그 장소 날씨로 바뀌어요)');
+
+    function showToast(msg) {
+      const t = $('pickMapToast');
+      t.textContent = msg;
+      t.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+    }
+
+    function showMyLocation(lat, lng) {
+      myPos = new kakao.maps.LatLng(lat, lng);
+      if (myOverlay) myOverlay.setMap(null);
+      const dot = document.createElement('div');
+      dot.className = 'my-location-marker';
+      dot.title = '내 위치';
+      dot.innerHTML = '<span class="my-location"></span>';
+      myOverlay = new kakao.maps.CustomOverlay({ position: myPos, content: dot, zIndex: 5 });
+      myOverlay.setMap(map);
+    }
+
+    // "내 위치로" 버튼: 지도를 내 위치로 옮긴다 (장소는 지도를 눌러 직접 고른다)
+    function goToMyLocation(fromButton) {
+      const button = $('pickLocateButton');
+      if (!navigator.geolocation) { if (fromButton) showToast('이 브라우저에서는 위치를 찾을 수 없어요.'); return; }
+      button.disabled = true;
+      button.classList.add('is-loading');
+      navigator.geolocation.getCurrentPosition(p => {
+        showMyLocation(p.coords.latitude, p.coords.longitude);
+        if (map.getLevel() > 4) map.setLevel(4);
+        map.panTo(myPos);
+        if (!$('latitude').value) {
+          weatherPicker.load(p.coords.latitude, p.coords.longitude, '내 위치 (장소를 고르면 그 장소 날씨로 바뀌어요)');
+        }
+        if (fromButton) showToast('내 위치로 옮겼어요. 지도를 눌러 모임 장소를 정하세요.');
+        button.disabled = false;
+        button.classList.remove('is-loading');
+      }, err => {
+        if (fromButton) {
+          showToast(err && err.code === 1
+            ? '위치 권한이 꺼져 있어요. 주소창 왼쪽 아이콘을 눌러 위치를 허용해 주세요.'
+            : '지금은 내 위치를 찾을 수 없어요.');
+        }
+        button.disabled = false;
+        button.classList.remove('is-loading');
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+    }
+    $('pickLocateButton').addEventListener('click', () => goToMyLocation(true));
+    goToMyLocation(false); // 처음 열 때도 내 위치 근처를 보여 준다 (실패하면 조용히 여의도)
+
+    function choose(latlng, name) {
+      marker.setPosition(latlng);
+      marker.setMap(map);
+      map.panTo(latlng);
+      $('latitude').value = latlng.getLat().toFixed(6);
+      $('longitude').value = latlng.getLng().toFixed(6);
+      if (name) $('placeName').value = name;
+      weatherPicker.load(latlng.getLat(), latlng.getLng(), name ? `선택한 장소 · ${name}` : '선택한 장소');
+    }
+
+    // 지도 클릭 → 그 위치의 주소를 장소 이름 칸에 채움 (이미 입력한 이름은 유지)
+    kakao.maps.event.addListener(map, 'click', e => {
+      const latlng = e.latLng;
+      choose(latlng);
+      geocoder.coord2Address(latlng.getLng(), latlng.getLat(), (result, status) => {
+        if (status === kakao.maps.services.Status.OK && !$('placeName').value) {
+          const a = result[0].road_address || result[0].address;
+          $('placeName').value = a.address_name;
+        }
+      });
+    });
+
+    // 키워드로 장소 검색 (지도 중심 근처 우선)
+    function search() {
+      const q = $('placeSearch').value.trim();
+      const ul = $('searchResults');
+      if (!q) { ul.innerHTML = ''; return; }
+      places.keywordSearch(q, (data, status) => {
+        if (status === kakao.maps.services.Status.ZERO_RESULT) {
+          ul.innerHTML = '<li class="search-state">검색 결과가 없습니다.</li>';
+          return;
+        }
+        if (status !== kakao.maps.services.Status.OK) {
+          ul.innerHTML = '<li class="search-state">장소 검색에 실패했습니다. 다시 시도하세요.</li>';
+          return;
+        }
+        ul.innerHTML = '';
+        data.slice(0, 7).forEach(p => {
+          const li = document.createElement('li');
+          li.innerHTML = `<b>${esc(p.place_name)}</b><span class="meta">${esc(p.road_address_name || p.address_name)}</span>`;
+          li.addEventListener('click', () => {
+            choose(new kakao.maps.LatLng(p.y, p.x), p.place_name);
+            map.setLevel(3);
+            ul.innerHTML = '';
+          });
+          ul.appendChild(li);
+        });
+      }, { location: map.getCenter(), sort: kakao.maps.services.SortBy.ACCURACY });
+    }
+
+    $('searchBtn').addEventListener('click', search);
+    $('placeSearch').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); search(); } // 엔터로 폼이 제출되지 않게
+    });
+  });
+
+  document.querySelector('form').addEventListener('submit', e => {
+    if (!$('latitude').value) {
+      e.preventDefault();
+      alert('검색 결과를 선택하거나 지도에서 모임 장소를 클릭해 주세요.');
+    }
+  });
+</script>
+</body>
+</html>

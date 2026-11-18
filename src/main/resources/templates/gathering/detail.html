@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${g.title} + ' - 나들이'">모임 - 나들이</title>
+  <!-- 카톡 공유 미리보기 -->
+  <meta property="og:title" th:content="${g.title}">
+  <meta property="og:description" th:content="${g.placeName + ' · ' + #temporals.format(g.startAt, 'M/d HH:mm')}">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="form-page detail-page">
+<header class="topbar">
+  <a href="/" class="logo"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 10.2c0 5.1-7 11-7 11s-7-5.9-7-11a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></span><span>나들이</span></a>
+  <div th:replace="~{fragments/auth :: auth}"></div>
+</header>
+
+<div class="container">
+  <div class="flash" th:if="${message}" th:text="${message}"></div>
+
+  <div class="page-heading"><p class="eyebrow">모임 상세</p><h1>모임 정보</h1></div>
+  <div class="card detail-summary">
+    <div class="activity-label" th:text="${g.tag.emoji + ' ' + g.tag.label}"></div>
+    <h2 class="gathering-title" th:text="${g.title}"></h2>
+    <dl class="detail-facts">
+      <div><dt>장소</dt><dd th:text="${g.placeName}"></dd></div>
+      <div><dt>시작 시간</dt><dd th:text="${#temporals.format(g.startAt, 'yyyy년 M월 d일 (E) HH:mm') + ' (한국 시간)'}"></dd></div>
+      <div><dt>현재 인원 / 정원</dt><dd th:text="${g.currentPeople + '명 / ' + g.maxPeople + '명'}"></dd></div>
+    </dl>
+    <div class="gathering-description" th:if="${g.description}" th:text="${g.description}"></div>
+  </div>
+
+  <div class="card weather-card">
+    <div class="card-heading"><div><p class="eyebrow">기상청 단기예보</p><h2>모임 시간대 날씨</h2></div></div>
+    <div th:if="${weather.available}" style="display:flex; align-items:center; gap:12px; margin-top:8px">
+      <span class="weather-big" th:text="${weather.emoji()}"></span>
+      <div>
+        <div th:text="${weather.description() + ' · ' + #numbers.formatDecimal(weather.temperature(), 1, 0) + '°'}"></div>
+        <div class="meta" th:text="${'강수확률 ' + weather.precipitationProbability() + '%'}"></div>
+      </div>
+    </div>
+    <p th:unless="${weather.available}" class="weather-unavailable">현재 이 일정의 예보를 표시할 수 없습니다.</p>
+    <div class="warn" th:if="${weather.available and weather.rainy and g.tag.outdoor}">
+      강수 예보가 있습니다. 야외 모임이면 출발 전에 최신 예보를 확인하세요.
+    </div>
+  </div>
+
+  <div class="card map-card">
+    <div class="card-heading"><div><p class="eyebrow">모임 장소</p><h2 th:text="${g.placeName}">장소 이름</h2></div></div>
+    <div id="detailMap"></div>
+    <a id="directions" class="btn secondary" target="_blank" rel="noopener"
+       style="width:100%; text-align:center; margin-top:10px">카카오맵에서 길찾기</a>
+  </div>
+
+  <form th:if="${loginUser != null or g.full}" method="post" th:action="@{/gatherings/{id}/join(id=${g.id})}">
+    <button class="btn" type="submit" style="width:100%" th:disabled="${joined or g.full}"
+            th:text="${joined} ? '참여 완료' : (${g.full} ? '모집 마감' : '참여하기')">참여하기</button>
+  </form>
+  <!-- 로그인 전: 로그인 후 이 화면으로 돌아오도록 /sign-in 주소를 거친다 -->
+  <a th:unless="${loginUser != null or g.full}" th:href="@{/gatherings/{id}/sign-in(id=${g.id})}"
+     class="btn" style="display:block; width:100%; text-align:center">로그인하고 참여하기</a>
+</div>
+
+<script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"></script>
+<script th:inline="javascript">
+  const lat = /*[[${g.latitude}]]*/ 37.5283, lng = /*[[${g.longitude}]]*/ 126.9294;
+  const placeName = /*[[${g.placeName}]]*/ '장소';
+  kakao.maps.load(() => {
+    const pos = new kakao.maps.LatLng(lat, lng);
+    const map = new kakao.maps.Map(document.getElementById('detailMap'), { center: pos, level: 3 });
+    map.setZoomable(false); // 페이지 스크롤 중 지도가 확대되지 않게
+    new kakao.maps.Marker({ position: pos }).setMap(map);
+  });
+  // 카카오맵 앱/웹에서 길찾기
+  document.getElementById('directions').href =
+    `https://map.kakao.com/link/to/${encodeURIComponent(placeName)},${lat},${lng}`;
+</script>
+</body>
+</html>

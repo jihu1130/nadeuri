@@ -1,0 +1,107 @@
+package com.example.nadeuri.gathering.service;
+
+import com.example.nadeuri.gathering.domain.Gathering;
+import com.example.nadeuri.gathering.domain.Participant;
+import com.example.nadeuri.gathering.dto.GatheringCreateRequest;
+import com.example.nadeuri.gathering.exception.AlreadyJoinedException;
+import com.example.nadeuri.gathering.repository.GatheringRepository;
+import com.example.nadeuri.gathering.repository.ParticipantRepository;
+import com.example.nadeuri.global.util.Times;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.NoSuchElementException;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class GatheringService {
+
+    public static final double MIN_RADIUS = 100;
+    public static final double MAX_RADIUS = 20_000;
+    private static final double METERS_PER_DEGREE = 111_320.0;
+
+    private final GatheringRepository repository;
+    private final ParticipantRepository participantRepository;
+
+    public List<Gathering> findNearby(double lat, double lng, double radiusMeters) {
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            throw new IllegalArgumentException("좌표 범위가 올바르지 않습니다.");
+        }
+        double radius = Math.max(MIN_RADIUS, Math.min(radiusMeters, MAX_RADIUS));
+
+        double latDelta = radius / METERS_PER_DEGREE;
+        double minLat = Math.max(-90, lat - latDelta);
+        double maxLat = Math.min(90, lat + latDelta);
+
+        double[] lng1;
+        double[] lng2;
+        double cosLat = Math.cos(Math.toRadians(lat));
+        double lngDelta = cosLat < 1e-6 ? 360 : radius / (METERS_PER_DEGREE * cosLat);
+
+        if (minLat <= -90 || maxLat >= 90 || lngDelta >= 180) {
+            // 극지방이 반경에 포함되면 모든 경도가 후보
+            lng1 = lng2 = new double[]{-180, 180};
+        } else {
+            double minLng = lng - lngDelta;
+            double maxLng = lng + lngDelta;
+            if (minLng < -180) {          // 서쪽으로 날짜변경선을 넘음
+                lng1 = new double[]{minLng + 360, 180};
+                lng2 = new double[]{-180, maxLng};
+            } else if (maxLng > 180) {    // 동쪽으로 날짜변경선을 넘음
+                lng1 = new double[]{minLng, 180};
+                lng2 = new double[]{-180, maxLng - 360};
+            } else {
+                lng1 = lng2 = new double[]{minLng, maxLng};
+            }
+        }
+
+        return repository.findNearby(lat, lng, radius, minLat, maxLat,
+                lng1[0], lng1[1], lng2[0], lng2[1], Times.now());
+    }
+
+    public Gathering get(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("모임을 찾을 수 없습니다: " + id));
+    }
+
+    public boolean hasJoined(Long gatheringId, Long userId) {
+        return userId != null
+                && participantRepository.existsByGatheringIdAndUserId(gatheringId, userId);
+    }
+
+    @Transactional
+    public Gathering create(GatheringCreateRequest req, Long hostUserId) {
+        Gathering g = repository.save(req.toEntity());
+        participantRepository.save(new Participant(g.getId(), hostUserId, true));
+        return g;
+    }
+
+    /**
+     * 참여 처리.
+     * 1) 인원을 원자적으로 증가 → 0건이면 마감. 참여 기록은 건드리지 않고 바로 끝낸다
+     * 2) 참여 기록 저장 → 같은 사람이 동시에 눌러도 유니크 제약이 막고,
+     *    그 예외로 트랜잭션 전체(1의 증가 포함)가 롤백된다
+     * 마감 요청이 참여 기록을 넣었다 롤백하지 않도록 이 순서로 한다
+     * (H2는 동시에 롤백된 자동 번호를 다시 내줘서 PK 충돌이 나기도 함).
+     *
+     * @throws AlreadyJoinedException 이미 참여한 모임
+     * @throws IllegalStateException  모집 마감 또는 이미 시작된 모임
+     */
+    @Transactional
+    public void join(Long id, Long userId) {
+        Gathering g = get(id);
+        if (!g.getStartAt().isAfter(Times.now())) {
+            throw new IllegalStateException("이미 시작된 모임이에요.");
+        }
+        if (participantRepository.existsByGatheringIdAndUserId(id, userId)) {
+            throw new AlreadyJoinedException();
+        }
+        if (repository.incrementIfAvailable(id) == 0) {
+            throw new IllegalStateException("모집 인원이 가득 찼습니다.");
+        }
+        participantRepository.saveAndFlush(new Participant(id, userId, false));
+    }
+}

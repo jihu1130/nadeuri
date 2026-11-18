@@ -1,0 +1,18 @@
+# 비밀 정보
+.env
+src/main/resources/application-local.yml
+
+# Gradle / 빌드
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ
+.idea/
+*.iml
+out/
+src/.idea/
+
+# OS
+.DS_Store
+Thumbs.db

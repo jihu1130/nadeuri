@@ -1,0 +1,178 @@
+package com.example.nadeuri.global.config;
+
+import com.example.nadeuri.global.security.LoginUser;
+import com.example.nadeuri.user.service.KakaoOAuth2UserService;
+import com.example.nadeuri.user.service.UserService;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import java.io.IOException;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+
+import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
+
+/**
+ * 로그인 정책
+ * - 둘러보기(홈, 모임 상세, 조회 API)는 누구나 가능
+ * - 모임 만들기, 참여하기는 로그인 필요 (아이디 로그인 또는 카카오 로그인)
+ *
+ * 카카오 REST API 키가 비어 있으면 로그인 기능만 꺼진 채로 앱이 뜬다.
+ * (H2 콘솔이 켜지면 서블릿이 2개가 되어 문자열 매처가 모호해지므로 antMatcher를 쓴다)
+ */
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    public static final String KAKAO = "kakao";
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                                   ObjectProvider<ClientRegistrationRepository> clients,
+                                                   KakaoOAuth2UserService kakaoUserService,
+                                                   UserService userService) throws Exception {
+        http
+                .authorizeHttpRequests(auth -> auth
+                        // "/gatherings/*" 보다 먼저 와야 함
+                        .requestMatchers(antMatcher("/gatherings/new"), antMatcher("/gatherings/*/sign-in"))
+                        .authenticated()
+                        .requestMatchers(
+                                antMatcher(HttpMethod.GET, "/"),
+                                antMatcher(HttpMethod.GET, "/gatherings/*"),
+                                antMatcher(HttpMethod.GET, "/api/**"),
+                                antMatcher("/css/**"),
+                                antMatcher("/favicon.ico"),
+                                antMatcher("/login"),
+                                antMatcher("/signup"),
+                                antMatcher("/error"),
+                                // 브라우저·도구가 자동으로 묻는 주소 (예: Chrome 개발자 도구의
+                                // /.well-known/appspecific/com.chrome.devtools.json). 로그인 없이 404로 끝나게 둔다
+                                antMatcher("/.well-known/**"),
+                                antMatcher("/h2-console/**"))
+                        .permitAll()
+                        .anyRequest().authenticated())
+                // 로그인 후 돌아갈 곳은 사람이 보는 화면 주소만 기억한다
+                .requestCache(cache -> cache.requestCache(REQUEST_CACHE))
+                // 로그인이 필요한 곳에 들어오면 우리 로그인 화면으로 보낸다
+                .exceptionHandling(e -> e.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login")))
+                // 우리 사이트 로그인: login.html 폼이 username, password를 POST /login 으로 보낸다
+                .formLogin(form -> form
+                        .loginPage("/login")
+                        .loginProcessingUrl("/login")
+                        .usernameParameter("username")
+                        .passwordParameter("password")
+                        .successHandler(localLoginSuccessHandler(userService))
+                        .failureUrl("/login?error=local"))
+                .logout(logout -> logout.logoutSuccessUrl("/"))
+                // H2 콘솔(h2 프로필 개발용)은 iframe과 자체 폼을 쓴다
+                .csrf(csrf -> csrf.ignoringRequestMatchers(antMatcher("/h2-console/**")))
+                .headers(h -> h.frameOptions(f -> f.sameOrigin()));
+
+        if (clients.getIfAvailable() != null) {
+            http.oauth2Login(oauth -> oauth
+                    .loginPage("/login")
+                    .userInfoEndpoint(u -> u.userService(kakaoUserService)));
+        }
+        return http.build();
+    }
+
+    /**
+     * 비밀번호 해시 방식. 저장값 앞에 {bcrypt} 같은 표시가 붙어서
+     * 나중에 방식을 바꿔도 예전 비밀번호를 계속 확인할 수 있다.
+     * (static: 이 설정 클래스와 UserService 사이에 순환 참조가 생기지 않게)
+     */
+    @Bean
+    public static PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    /** 아이디 로그인 성공 시 마지막 로그인 시각을 남기고, 원래 가려던 곳(없으면 홈)으로 보낸다 */
+    private static AuthenticationSuccessHandler localLoginSuccessHandler(UserService userService) {
+        SavedRequestAwareAuthenticationSuccessHandler handler = new SavedRequestAwareAuthenticationSuccessHandler() {
+            @Override
+            public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+                                                Authentication authentication) throws ServletException, IOException {
+                if (authentication.getPrincipal() instanceof LoginUser user) {
+                    userService.markLoggedIn(user.getId());
+                }
+                super.onAuthenticationSuccess(request, response, authentication);
+            }
+        };
+        handler.setRequestCache(REQUEST_CACHE);
+        return handler;
+    }
+
+    /**
+     * "로그인 후 돌아갈 곳" 저장소.
+     * 기본 설정은 로그인이 필요한 GET 요청이면 무엇이든 기억해서, 브라우저가 몰래 보낸 요청
+     * (Chrome 개발자 도구의 /.well-known/... 등)이 저장되면 로그인 후 엉뚱한 주소로 이동했다.
+     * 그래서 사람이 주소창이나 링크로 여는 화면 주소만 저장한다.
+     */
+    static final HttpSessionRequestCache REQUEST_CACHE = createRequestCache();
+
+    private static HttpSessionRequestCache createRequestCache() {
+        RequestMatcher notPage = new OrRequestMatcher(
+                antMatcher("/.well-known/**"),
+                antMatcher("/api/**"),
+                antMatcher("/error"),
+                antMatcher("/error/**"),
+                antMatcher("/css/**"),
+                antMatcher("/js/**"),
+                antMatcher("/images/**"),
+                antMatcher("/favicon.ico"),
+                antMatcher("/h2-console/**"),
+                // fetch/XHR 요청 (화면 이동이 아님)
+                new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest"));
+        HttpSessionRequestCache cache = new HttpSessionRequestCache();
+        cache.setRequestMatcher(new AndRequestMatcher(
+                antMatcher(HttpMethod.GET, "/**"),
+                new NegatedRequestMatcher(notPage)));
+        return cache;
+    }
+
+    /** 카카오 REST API 키가 설정된 경우에만 등록한다 */
+    @Bean
+    @ConditionalOnExpression("!'${kakao.rest-api-key:}'.isBlank()")
+    public ClientRegistrationRepository clientRegistrationRepository(
+            @Value("${kakao.rest-api-key}") String restApiKey,
+            @Value("${kakao.client-secret:}") String clientSecret) {
+        ClientRegistration kakao = ClientRegistration.withRegistrationId(KAKAO)
+                .clientName("카카오")
+                .clientId(restApiKey)
+                .clientSecret(clientSecret)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .scope("profile_nickname", "profile_image")
+                .authorizationUri("https://kauth.kakao.com/oauth/authorize")
+                .tokenUri("https://kauth.kakao.com/oauth/token")
+                .userInfoUri("https://kapi.kakao.com/v2/user/me")
+                .userNameAttributeName("id")
+                .build();
+        return new InMemoryClientRegistrationRepository(kakao);
+    }
+}

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff8df">
+  <meta name="description" content="현재 위치 주변의 산책·러닝·피크닉 모임을 검색하고 직접 만들 수 있습니다.">
+  <title>나들이 | 주변 모임 찾기</title>
+  <link rel="preconnect" href="https://dapi.kakao.com">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="home-page">
+<header class="topbar home-topbar">
+  <a href="/" class="logo"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 10.2c0 5.1-7 11-7 11s-7-5.9-7-11a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></span><span>나들이</span></a>
+  <div class="topbar-right">
+  <div class="weather-chip" id="weatherChip" aria-live="polite"><span class="weather-dot"></span> 날씨 예보 불러오는 중</div>
+    <div th:replace="~{fragments/auth :: auth}"></div>
+  </div>
+</header>
+
+<main class="home-shell">
+  <section class="home-hero" aria-labelledby="heroTitle">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="eyebrow-dot"></span> 주변 모임 검색</p>
+      <h1 id="heroTitle">우리 동네<br><span>모임 찾기</span></h1>
+      <p class="hero-description">현재 위치 또는 여의도 기준으로 모임을 검색합니다.<br class="desktop-break"> 산책·러닝·피크닉 모임을 직접 등록할 수 있습니다.</p>
+      <a href="/gatherings/new" class="btn hero-cta">모임 만들기 <span aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+
+  <section class="discover-section" aria-label="주변 모임 찾기">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow section-eyebrow">주변 검색</p>
+        <h2>반경 안의 모임</h2>
+        <p class="section-subtitle" id="locationLabel">현재 위치 확인 중…</p>
+      </div>
+      <div class="discover-controls">
+        <label class="radius-control" for="radiusSelect"><span aria-hidden="true">⌖</span>
+          <select id="radiusSelect" aria-label="검색 반경">
+            <option value="3000">반경 3km</option>
+            <option value="5000" selected>반경 5km</option>
+            <option value="10000">반경 10km</option>
+            <option value="20000">반경 20km</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="discover-grid">
+      <section class="map-panel" aria-label="주변 모임 지도">
+        <div class="map-panel-heading">
+          <span class="map-live-dot"></span><span>동네 지도</span>
+          <div class="map-legend" aria-label="지도 표시 안내">
+            <span><i class="legend-pin" aria-hidden="true">●</i> 주변 모임</span>
+            <span><i class="legend-you" aria-hidden="true"></i> 내 위치</span>
+          </div>
+          <span class="map-hint">핀을 누르면 모임 정보가 표시됩니다</span>
+        </div>
+        <div id="map" aria-label="주변 모임이 표시된 지도"></div>
+        <div id="mapFallback" class="map-fallback" hidden>카카오 지도를 불러오지 못했습니다. 오른쪽 목록에서 모임을 확인하세요.</div>
+        <!-- 지도를 둘러보다가 한 번에 내 위치로 돌아오는 버튼 (다시 검색하지 않고 이동만 함) -->
+        <button type="button" class="map-locate-button" id="mapLocateButton" aria-label="지도를 내 위치로 이동" title="내 위치로 이동">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>
+            <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>
+          </svg>
+        </button>
+        <div id="mapToast" class="map-toast" role="status" aria-live="polite" hidden></div>
+        <!-- 지도를 끌어서 옮기면 나타남: 지금 보이는 지도 가운데를 기준으로 다시 검색 -->
+        <button type="button" class="research-button" id="researchButton" hidden>
+          <span aria-hidden="true">↻</span> 이 지역에서 다시 검색
+        </button>
+      </section>
+
+      <section class="meetup-panel" aria-labelledby="listTitle">
+        <div class="meetup-heading"><div><p class="eyebrow section-eyebrow">검색 결과</p><h2 id="listTitle">모임 목록</h2></div><span class="result-count" id="resultCount">—</span></div>
+        <div id="list" class="meetup-list" aria-live="polite"><div class="list-state"><span class="loading-spinner"></span><p>모임 목록을 불러오는 중입니다.</p></div></div>
+        <div class="list-footer"><span>원하는 모임이 없으면 직접 등록하세요.</span><a href="/gatherings/new">모임 등록 <span aria-hidden="true">→</span></a></div>
+      </section>
+    </div>
+  </section>
+
+  <footer class="home-footer"><span>검색 결과에는 선택한 반경 안에서 시작 예정인 모임만 표시됩니다.</span><span>반경 3–20km</span></footer>
+</main>
+
+<script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"></script>
+<script>
+  const DEFAULT = { lat: 37.5283, lng: 126.9294 };
+  let radius = 5000;
+  let map = null;
+  let overlays = [];
+  let openInfo = null;
+  let myLocationOverlay = null;
+  let myPos = null;          // 마지막으로 확인한 내 위치 { lat, lng }
+  let toastTimer = null;
+  let requestVersion = 0;
+  const FOCUS_LEVEL = 4;     // 내 위치로 이동할 때 이보다 멀리 축소돼 있으면 이 정도로 확대
+  let searchPoint = DEFAULT;
+  let searchIsCurrent = false;
+
+  function fmt(dt) {
+    const d = new Date(dt);
+    return `${d.getMonth() + 1}월 ${d.getDate()}일 · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function showMapFallback() {
+    document.getElementById('mapFallback').hidden = false;
+  }
+  function showMapToast(message) {
+    const toast = document.getElementById('mapToast');
+    toast.textContent = message;
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.hidden = true; }, 5000);
+  }
+
+  // 내 위치는 파란 점 하나로 표시한다
+  function setLocation(lat, lng) {
+    myPos = { lat, lng };
+    if (!map) return;
+    const pos = new kakao.maps.LatLng(lat, lng);
+    map.setCenter(pos);
+    if (map.getLevel() > FOCUS_LEVEL + 1) map.setLevel(FOCUS_LEVEL);
+
+    if (myLocationOverlay) myLocationOverlay.setMap(null);
+    const marker = document.createElement('div');
+    marker.className = 'my-location-marker';
+    marker.title = '내 위치';
+    marker.innerHTML = '<span class="my-location"></span>';
+    myLocationOverlay = new kakao.maps.CustomOverlay({ position: pos, content: marker, zIndex: 5 });
+    myLocationOverlay.setMap(map);
+    updateLocateButton();
+  }
+
+  // 지도 안 버튼: 다시 검색하지 않고 내 위치로 이동만 한다. 위치를 아직 모르면 새로 찾는다.
+  function focusMyLocation() {
+    if (!myPos) { locate(); return; }
+    if (!map) return;
+    // 다른 지역을 검색해 둔 상태라면, 내 위치로 돌아온 뒤 "이 지역에서 다시 검색"을 띄울 수 있게 한다
+    userMovedMap = true;
+    if (map.getLevel() > FOCUS_LEVEL + 1) map.setLevel(FOCUS_LEVEL);
+    map.panTo(new kakao.maps.LatLng(myPos.lat, myPos.lng));
+    // 점을 잠깐 크게 깜빡여서 눈에 띄게 한다
+    const marker = myLocationOverlay?.getContent();
+    if (marker) {
+      marker.classList.remove('is-flash');
+      void marker.offsetWidth; // 애니메이션 다시 시작
+      marker.classList.add('is-flash');
+    }
+  }
+
+  // 지도 가운데에 내 위치가 있으면 버튼을 파랗게 채워 "지금 내 위치를 보고 있음"을 알려 준다
+  function updateLocateButton() {
+    const button = document.getElementById('mapLocateButton');
+    if (!map || !myPos) { button.classList.remove('is-centered'); return; }
+    const proj = map.getProjection();
+    const center = proj.containerPointFromCoords(map.getCenter());
+    const me = proj.containerPointFromCoords(new kakao.maps.LatLng(myPos.lat, myPos.lng));
+    button.classList.toggle('is-centered', Math.hypot(center.x - me.x, center.y - me.y) < 24);
+  }
+
+  function locationErrorMessage(err) {
+    if (err && err.code === 1) return '브라우저에서 이 사이트의 위치 권한을 허용한 뒤 다시 시도하세요.';
+    if (err && err.code === 3) return '위치 확인 시간이 초과되었습니다. 다시 시도하세요.';
+    return '위치 정보를 확인할 수 없습니다. 여의도 기준 검색 결과를 표시합니다.';
+  }
+  function renderWeather(weather) {
+    const chip = document.getElementById('weatherChip');
+    chip.innerHTML = weather && weather.available
+      ? `<span class="weather-dot"></span><span>${esc(weather.emoji)} ${esc(weather.description)} ${Math.round(weather.temperature)}°</span><span class="weather-divider">·</span><span>강수 ${weather.precipitationProbability}%</span>`
+      : '<span class="weather-dot"></span><span>날씨 예보를 표시할 수 없습니다</span>';
+  }
+  function renderEmpty(message, detail) {
+    document.getElementById('list').innerHTML = `<div class="list-state empty-state"><span class="empty-sun" aria-hidden="true">＋</span><strong>${esc(message)}</strong><p>${esc(detail)}</p><a href="/gatherings/new" class="empty-cta">모임 등록 <span aria-hidden="true">→</span></a></div>`;
+  }
+  function renderError() {
+    document.getElementById('list').innerHTML = '<div class="list-state empty-state"><span class="empty-sun" aria-hidden="true">!</span><strong>모임 목록을 불러오지 못했습니다</strong><p>연결 상태를 확인한 뒤 다시 시도하세요.</p><button type="button" class="retry-button" id="retryButton">다시 불러오기</button></div>';
+    document.getElementById('retryButton').addEventListener('click', () => loadAt(searchPoint.lat, searchPoint.lng, searchIsCurrent));
+  }
+  // 검색 기준: true = 현재 위치, false = 기본 위치(여의도), 'area' = 지도에서 고른 지역
+  async function loadAt(lat, lng, isCurrent) {
+    const version = ++requestVersion;
+    document.getElementById('locationLabel').textContent = isCurrent === 'area'
+      ? `지도에서 고른 지역 기준 · 반경 ${radius / 1000}km`
+      : isCurrent
+        ? `현재 위치 기준 · 반경 ${radius / 1000}km`
+        : `현재 위치를 확인하지 못해 여의도 기준으로 검색 · 반경 ${radius / 1000}km`;
+    drawSearchArea(lat, lng);
+    hideResearchButton();
+    document.getElementById('listTitle').textContent = '모임 목록';
+    document.getElementById('resultCount').textContent = '…';
+    document.getElementById('list').innerHTML = '<div class="list-state"><span class="loading-spinner"></span><p>모임 목록을 불러오는 중입니다.</p></div>';
+    const [gatheringsResult, weatherResult] = await Promise.allSettled([
+      fetch(`/api/gatherings?lat=${lat}&lng=${lng}&radius=${radius}`).then(r => { if (!r.ok) throw new Error('모임 요청 실패'); return r.json(); }),
+      fetch(`/api/weather?lat=${lat}&lng=${lng}`).then(r => { if (!r.ok) throw new Error('날씨 요청 실패'); return r.json(); })
+    ]);
+    if (version !== requestVersion) return;
+    renderWeather(weatherResult.status === 'fulfilled' ? weatherResult.value : null);
+    if (gatheringsResult.status !== 'fulfilled') {
+      document.getElementById('listTitle').textContent = '주변 모임';
+      document.getElementById('resultCount').textContent = '—';
+      renderError();
+      return;
+    }
+    const gatherings = gatheringsResult.value;
+    document.getElementById('listTitle').textContent = `반경 ${radius / 1000}km 모임`;
+    document.getElementById('resultCount').textContent = `${gatherings.length}개`;
+    document.getElementById('list').innerHTML = '';
+    overlays.forEach(o => o.setMap(null));
+    overlays = [];
+    openInfo?.setMap(null);
+    openInfo = null;
+    if (!gatherings.length) {
+      renderEmpty(`반경 ${radius / 1000}km 안에 예정된 모임이 없습니다.`, '검색 반경을 넓히거나 새 모임을 등록하세요.');
+      return;
+    }
+    gatherings.forEach(g => {
+      let pos = null;
+      if (map) {
+        pos = new kakao.maps.LatLng(g.latitude, g.longitude);
+        const pin = document.createElement('button');
+        pin.type = 'button';
+        pin.className = 'map-pin';
+        pin.setAttribute('aria-label', `${g.title} 모임 정보 보기`);
+        pin.textContent = g.emoji;
+        const pinOverlay = new kakao.maps.CustomOverlay({ position: pos, content: pin, yAnchor: 1, clickable: true, zIndex: 3 });
+        pinOverlay.setMap(map);
+        const info = new kakao.maps.CustomOverlay({
+          position: pos, yAnchor: 1.45, clickable: true, zIndex: 4,
+          content: `<a class="map-info" href="/gatherings/${g.id}"><b>${esc(g.title)}</b><span>${esc(g.placeName)}</span><span>${fmt(g.startAt)} · ${g.currentPeople}/${g.maxPeople}명</span><span class="more">모임 자세히 보기 →</span></a>`
+        });
+        pin.addEventListener('click', e => { e.stopPropagation(); openInfo?.setMap(null); info.setMap(map); openInfo = info; });
+        overlays.push(pinOverlay, info);
+      }
+      const item = document.createElement('a');
+      item.className = 'meetup-item';
+      item.href = `/gatherings/${g.id}`;
+      item.innerHTML = `<span class="meetup-emoji">${esc(g.emoji)}</span><span class="meetup-copy"><span class="meetup-tag">${esc(g.tagLabel)}</span><strong>${esc(g.title)}</strong><span class="meetup-meta">${esc(g.placeName)}</span><span class="meetup-time">${fmt(g.startAt)} <i>·</i> ${g.currentPeople}/${g.maxPeople}명</span></span><span class="meetup-arrow" aria-hidden="true">↗</span>`;
+      if (map) item.addEventListener('mouseenter', () => map.panTo(pos));
+      document.getElementById('list').appendChild(item);
+    });
+  }
+  /* ===== 이 지역에서 다시 검색 =====
+   * 사용자가 지도를 끌어서 검색한 곳에서 충분히 벗어나면 버튼을 보여 주고,
+   * 누르면 지금 지도 가운데를 기준으로 같은 반경에서 다시 찾는다.
+   * (목록에 마우스를 올려 지도가 움직이는 것처럼 코드가 옮긴 경우에는 띄우지 않는다)
+   */
+  let userMovedMap = false;
+  let searchCircle = null;
+
+  // 검색한 범위를 옅은 원으로 보여 준다
+  function drawSearchArea(lat, lng) {
+    if (!map) return;
+    if (searchCircle) searchCircle.setMap(null);
+    searchCircle = new kakao.maps.Circle({
+      center: new kakao.maps.LatLng(lat, lng), radius,
+      strokeWeight: 1.5, strokeColor: '#c99a1e', strokeOpacity: 0.55, strokeStyle: 'shortdash',
+      fillColor: '#f2c94c', fillOpacity: 0.06
+    });
+    searchCircle.setMap(map);
+  }
+
+  function hideResearchButton() {
+    userMovedMap = false;
+    document.getElementById('researchButton').hidden = true;
+  }
+
+  // 지도 가운데와 검색 기준점 사이 거리(m)
+  function distanceFromSearch() {
+    const c = map.getCenter();
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(c.getLat() - searchPoint.lat), dLng = toRad(c.getLng() - searchPoint.lng);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(searchPoint.lat)) * Math.cos(toRad(c.getLat())) * Math.sin(dLng / 2) ** 2;
+    return 6371000 * 2 * Math.asin(Math.sqrt(a));
+  }
+
+  // 반경의 15%(최소 300m) 넘게 벗어나면 버튼을 띄운다. 다시 가까이 돌아오면 숨긴다.
+  function updateResearchButton() {
+    if (!map || !userMovedMap) return;
+    document.getElementById('researchButton').hidden = distanceFromSearch() < Math.max(300, radius * 0.15);
+  }
+
+  function researchHere() {
+    const c = map.getCenter();
+    // 지도 가운데가 내 위치면("내 위치로" 버튼이 파랗게 채워진 상태) "현재 위치 기준"으로 검색한다
+    const atMe = myPos && document.getElementById('mapLocateButton').classList.contains('is-centered');
+    searchPoint = atMe ? myPos : { lat: c.getLat(), lng: c.getLng() };
+    searchIsCurrent = atMe ? true : 'area';
+    loadAt(searchPoint.lat, searchPoint.lng, searchIsCurrent);
+  }
+
+  // 첫 화면에서 현재 위치를 확인하고, 지도 안 버튼에서는 필요한 경우 위치를 다시 찾는다
+  function locate() {
+    const buttons = [document.getElementById('mapLocateButton')].filter(Boolean);
+    // 위치를 못 찾으면: 이미 알던 내 위치가 있으면 그대로 두고, 없으면 기본 위치(여의도)를 보여 준다
+    const fallback = err => {
+      if (err) showMapToast(locationErrorMessage(err));
+      if (myPos) {
+        searchPoint = myPos;
+        searchIsCurrent = true;
+      } else {
+        searchPoint = DEFAULT;
+        searchIsCurrent = false;
+      }
+      loadAt(searchPoint.lat, searchPoint.lng, searchIsCurrent);
+    };
+    if (!navigator.geolocation) { fallback({ code: 2 }); return; }
+    buttons.forEach(b => { b.disabled = true; b.classList.add('is-loading'); });
+    const done = () => buttons.forEach(b => { b.disabled = false; b.classList.remove('is-loading'); });
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude, longitude } = pos.coords;
+      searchPoint = { lat: latitude, lng: longitude };
+      searchIsCurrent = true;
+      setLocation(latitude, longitude);
+      loadAt(latitude, longitude, true);
+      done();
+    }, err => {
+      fallback(err);
+      done();
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+  }
+
+  document.getElementById('radiusSelect').addEventListener('change', e => { radius = Number(e.target.value); loadAt(searchPoint.lat, searchPoint.lng, searchIsCurrent); });
+  document.getElementById('mapLocateButton').addEventListener('click', focusMyLocation);
+  if (window.kakao?.maps) {
+    kakao.maps.load(() => {
+      map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(DEFAULT.lat, DEFAULT.lng), level: 5 });
+      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      kakao.maps.event.addListener(map, 'click', () => { openInfo?.setMap(null); openInfo = null; });
+      kakao.maps.event.addListener(map, 'idle', () => { updateLocateButton(); updateResearchButton(); });
+      kakao.maps.event.addListener(map, 'dragend', () => { userMovedMap = true; updateResearchButton(); });
+      document.getElementById('researchButton').addEventListener('click', researchHere);
+      locate();
+    });
+  } else {
+    searchPoint = DEFAULT;
+    showMapFallback();
+    document.getElementById('mapLocateButton').hidden = true;
+    locate();
+  }
+</script>
+</body>
+</html>

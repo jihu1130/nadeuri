@@ -1,0 +1,63 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: nadeuri
+  profiles:
+    # 개발 PC에서는 application-local.yml(깃에 올리지 않음)의 계정·키를 사용
+    # 운영에서는 SPRING_PROFILES_ACTIVE=prod 와 환경변수로 실행
+    default: local
+  datasource:
+    # 기본값 없음: 계정·비밀번호는 반드시 환경변수 또는 application-local.yml로 주입
+    url: ${DB_URL:jdbc:mysql://localhost:3306/nadeuri?serverTimezone=Asia/Seoul&characterEncoding=UTF-8}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: ${DDL_AUTO:validate}
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Seoul
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=3h
+
+kma:
+  # 기상청 API허브(apihub.kma.go.kr) 단기예보 조회 — authKey 사용
+  # 공공데이터포털 키를 쓰려면 base-url을 https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst,
+  # key-param을 serviceKey로 바꾸고 Decoding 키를 넣는다.
+  base-url: https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/getVilageFcst
+  key-param: authKey
+  service-key: ${KMA_SERVICE_KEY:}
+
+kakao:
+  # Kakao Developers > 앱 > 플랫폼 키 > JavaScript 키 (카카오맵 사용 설정 ON 필요)
+  javascript-key: ${KAKAO_JS_KEY:}
+  # 카카오 로그인: 플랫폼 키 > REST API 키와 그 클라이언트 시크릿.
+  # 비어 있으면 로그인 기능만 꺼진 채로 앱이 뜬다 (둘러보기는 가능, 모임 만들기·참여는 불가).
+  # 리다이렉트 URI로 http://localhost:8888/login/oauth2/code/kakao 를 등록해야 한다.
+  rest-api-key: ${KAKAO_REST_API_KEY:}
+  client-secret: ${KAKAO_CLIENT_SECRET:}
+
+---
+# MySQL 없이 테스트할 때: --spring.profiles.active=h2
+spring:
+  config:
+    activate:
+      on-profile: h2
+  datasource:
+    url: jdbc:h2:mem:nadeuri;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true   # http://localhost:8888/h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
