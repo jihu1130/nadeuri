@@ -1,5 +1,6 @@
 package com.example.nadeuri.gathering.repository;
 
+import com.example.nadeuri.gathering.domain.ActivityTag;
 import com.example.nadeuri.gathering.domain.Gathering;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -46,4 +47,36 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
             WHERE g.id = :id AND g.currentPeople < g.maxPeople
             """)
     int incrementIfAvailable(@Param("id") Long id);
+
+    /**
+     * 모임 수정. 정원이 지금 참여 인원보다 적어지면 바꾸지 않는다 (0건 반환).
+     * 조건과 변경을 UPDATE 문 하나로 처리해서, 수정하는 순간 누가 참여해도 정원을 넘지 않는다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE Gathering g SET g.title = :title, g.description = :description, g.tag = :tag,
+                   g.placeName = :placeName, g.latitude = :latitude, g.longitude = :longitude,
+                   g.startAt = :startAt, g.maxPeople = :maxPeople
+            WHERE g.id = :id AND g.currentPeople <= :maxPeople
+            """)
+    int updateIfFits(@Param("id") Long id, @Param("title") String title, @Param("description") String description,
+                     @Param("tag") ActivityTag tag, @Param("placeName") String placeName,
+                     @Param("latitude") double latitude, @Param("longitude") double longitude,
+                     @Param("startAt") LocalDateTime startAt, @Param("maxPeople") int maxPeople);
+
+    /** 참여 취소: 주최자 1명 아래로는 내려가지 않게 원자적으로 1 줄인다 */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE Gathering g SET g.currentPeople = g.currentPeople - 1
+            WHERE g.id = :id AND g.currentPeople > 1
+            """)
+    int decrementIfAbove1(@Param("id") Long id);
+
+    /** 이 회원이 만든(host=true) 또는 참여한(host=false) 모임, 시작 시각 순 */
+    @Query("""
+            SELECT g FROM Gathering g
+            WHERE g.id IN (SELECT p.gatheringId FROM Participant p WHERE p.userId = :userId AND p.host = :host)
+            ORDER BY g.startAt
+            """)
+    List<Gathering> findByMember(@Param("userId") Long userId, @Param("host") boolean host);
 }

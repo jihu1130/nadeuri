@@ -158,6 +158,12 @@ nadeuri
 | GET | `/gatherings/{id}` | 모임 상세 (날씨 예보 포함) |
 | GET | `/gatherings/{id}/sign-in` | 로그인한 뒤 상세 화면으로 돌아오기 🔒 |
 | POST | `/gatherings/{id}/join` | 참여 🔒 |
+| POST | `/gatherings/{id}/leave` | 참여 취소 (시작 전, 주최자 제외) 🔒 |
+| POST | `/gatherings/{id}/delete` | 모임 삭제 (주최자만) 🔒 |
+| GET | `/gatherings/{id}/edit` | 모임 수정 화면 (주최자만, 시작 전) 🔒 |
+| POST | `/gatherings/{id}/edit` | 모임 수정 저장 🔒 |
+| GET | `/me/gatherings` | 내 모임 (만든 모임 / 참여한 모임) 🔒 |
+| GET | `/api/weather/forecast?lat=&lng=` | 날짜별·시간별 예보 JSON (모임 시간 고르기용) |
 | GET | `/api/gatherings?lat=&lng=&radius=` | 주변 모임 JSON (반경 100~20,000m, 좌표가 범위를 벗어나면 400) |
 | GET | `/api/weather?lat=&lng=` | 현재 날씨 JSON |
 
@@ -172,9 +178,9 @@ nadeuri
 - [x] 카카오 로그인 (Spring Security OAuth2). 게스트 쿠키 대신 회원 ID로 참여 기록
 - [x] 아이디 + 비밀번호 회원가입·로그인
 - [x] 지도에서 내 위치로 바로 이동 (지도 안 버튼, 위치 표시 강조, 위치 오류 안내)
-- [ ] 구글 로그인
 - [ ] 아이디 계정과 소셜 계정 연결, 비밀번호 찾기(이메일 등록 필요), 로그인 시도 횟수 제한
-- [ ] 모임 상세에 주최자 닉네임과 참여자 목록 표시, 내가 만든·참여한 모임 보기
+- [x] 모임 상세에 주최자·참여자 목록, 내 모임 화면, 참여 취소, 모임 삭제
+- [x] 모임 수정 (주최자)
 - [x] 지도 이동 후 "이 지역에서 다시 검색"
 - [ ] WebSocket(STOMP) 모임 채팅
 - [ ] 데이터가 늘어나면 MySQL 공간 인덱스(`ST_Distance_Sphere`)로 검색 전환

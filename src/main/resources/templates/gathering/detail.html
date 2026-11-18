@@ -26,8 +26,25 @@
       <div><dt>장소</dt><dd th:text="${g.placeName}"></dd></div>
       <div><dt>시작 시간</dt><dd th:text="${#temporals.format(g.startAt, 'yyyy년 M월 d일 (E) HH:mm') + ' (한국 시간)'}"></dd></div>
       <div><dt>현재 인원 / 정원</dt><dd th:text="${g.currentPeople + '명 / ' + g.maxPeople + '명'}"></dd></div>
+      <div><dt>주최</dt><dd th:text="${host != null ? host.nickname : '나들이 (샘플 모임)'}">주최자</dd></div>
     </dl>
     <div class="gathering-description" th:if="${g.description}" th:text="${g.description}"></div>
+  </div>
+
+  <!--/* 참여자 목록: 주최자 먼저, 그다음 참여한 순서 */-->
+  <div class="card participants-card">
+    <div class="card-heading"><div><p class="eyebrow">함께하는 사람</p>
+      <h2 th:text="${'참여자 ' + participants.size() + '명'}">참여자</h2></div></div>
+    <p class="participants-empty" th:if="${participants.isEmpty()}">아직 참여한 사람이 없어요. 첫 번째로 참여해 보세요!</p>
+    <ul class="participant-list" th:unless="${participants.isEmpty()}">
+      <li th:each="p : ${participants}" th:classappend="${loginUser != null and p.userId == loginUser.id} ? 'is-me'">
+        <img th:if="${p.profileImageUrl}" th:src="${p.profileImageUrl}" class="participant-avatar" alt="" referrerpolicy="no-referrer">
+        <span th:unless="${p.profileImageUrl}" class="participant-avatar initial" aria-hidden="true" th:text="${p.initial()}">나</span>
+        <span class="participant-name" th:text="${p.nickname}">닉네임</span>
+        <span class="participant-badge host" th:if="${p.host}">주최</span>
+        <span class="participant-badge me" th:if="${loginUser != null and p.userId == loginUser.id}">나</span>
+      </li>
+    </ul>
   </div>
 
   <div class="card weather-card">
@@ -52,13 +69,41 @@
        style="width:100%; text-align:center; margin-top:10px">카카오맵에서 길찾기</a>
   </div>
 
-  <form th:if="${loginUser != null or g.full}" method="post" th:action="@{/gatherings/{id}/join(id=${g.id})}">
-    <button class="btn" type="submit" style="width:100%" th:disabled="${joined or g.full}"
-            th:text="${joined} ? '참여 완료' : (${g.full} ? '모집 마감' : '참여하기')">참여하기</button>
-  </form>
-  <!-- 로그인 전: 로그인 후 이 화면으로 돌아오도록 /sign-in 주소를 거친다 -->
-  <a th:unless="${loginUser != null or g.full}" th:href="@{/gatherings/{id}/sign-in(id=${g.id})}"
-     class="btn" style="display:block; width:100%; text-align:center">로그인하고 참여하기</a>
+  <div class="detail-actions">
+    <!--/* 주최자: 모임 삭제 (참여 기록도 함께 지워짐) */-->
+    <th:block th:if="${isHost}">
+      <p class="detail-note">내가 만든 모임이에요.</p>
+      <a th:unless="${started}" class="btn secondary" th:href="@{/gatherings/{id}/edit(id=${g.id})}"
+         style="width:100%">모임 정보 수정</a>
+      <form method="post" th:action="@{/gatherings/{id}/delete(id=${g.id})}"
+            onsubmit="return confirm('모임을 삭제할까요? 참여자 기록도 함께 지워지고 되돌릴 수 없어요.');">
+        <button class="btn danger" type="submit" style="width:100%">모임 삭제</button>
+      </form>
+    </th:block>
+
+    <!--/* 참여자: 참여 완료 표시 + 참여 취소 (시작 전까지) */-->
+    <th:block th:if="${joined and !isHost}">
+      <button class="btn" type="button" style="width:100%" disabled>참여 완료</button>
+      <form th:unless="${started}" method="post" th:action="@{/gatherings/{id}/leave(id=${g.id})}"
+            onsubmit="return confirm('참여를 취소할까요?');">
+        <button class="btn secondary" type="submit" style="width:100%">참여 취소</button>
+      </form>
+    </th:block>
+
+    <!--/* 아직 참여 안 함 */-->
+    <th:block th:unless="${joined}">
+      <button th:if="${started}" class="btn" type="button" style="width:100%" disabled>이미 시작된 모임</button>
+      <th:block th:unless="${started}">
+        <form th:if="${loginUser != null or g.full}" method="post" th:action="@{/gatherings/{id}/join(id=${g.id})}">
+          <button class="btn" type="submit" style="width:100%" th:disabled="${g.full}"
+                  th:text="${g.full} ? '모집 마감' : '참여하기'">참여하기</button>
+        </form>
+        <!-- 로그인 전: 로그인 후 이 화면으로 돌아오도록 /sign-in 주소를 거친다 -->
+        <a th:unless="${loginUser != null or g.full}" th:href="@{/gatherings/{id}/sign-in(id=${g.id})}"
+           class="btn" style="display:block; width:100%; text-align:center">로그인하고 참여하기</a>
+      </th:block>
+    </th:block>
+  </div>
 </div>
 
 <script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"></script>

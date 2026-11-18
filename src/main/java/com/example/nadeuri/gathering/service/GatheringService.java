@@ -3,7 +3,9 @@ package com.example.nadeuri.gathering.service;
 import com.example.nadeuri.gathering.domain.Gathering;
 import com.example.nadeuri.gathering.domain.Participant;
 import com.example.nadeuri.gathering.dto.GatheringCreateRequest;
+import com.example.nadeuri.gathering.dto.ParticipantView;
 import com.example.nadeuri.gathering.exception.AlreadyJoinedException;
+import com.example.nadeuri.gathering.exception.NotHostException;
 import com.example.nadeuri.gathering.repository.GatheringRepository;
 import com.example.nadeuri.gathering.repository.ParticipantRepository;
 import com.example.nadeuri.global.util.Times;
@@ -103,5 +105,90 @@ public class GatheringService {
             throw new IllegalStateException("모집 인원이 가득 찼습니다.");
         }
         participantRepository.saveAndFlush(new Participant(id, userId, false));
+    }
+
+    /** 참여자 목록 (주최자 먼저) */
+    public List<ParticipantView> participants(Long gatheringId) {
+        return participantRepository.findViews(gatheringId);
+    }
+
+    public boolean isHost(Long gatheringId, Long userId) {
+        return userId != null && participantRepository.findByGatheringIdAndUserId(gatheringId, userId)
+                .map(Participant::isHost).orElse(false);
+    }
+
+    /**
+     * 참여 취소. 참여 기록을 지우고 인원을 1 줄인다.
+     * @throws IllegalStateException 이미 시작된 모임, 참여하지 않은 모임, 주최자인 경우
+     */
+    @Transactional
+    public void leave(Long id, Long userId) {
+        Gathering g = get(id);
+        if (!g.getStartAt().isAfter(Times.now())) {
+            throw new IllegalStateException("이미 시작된 모임은 참여를 취소할 수 없어요.");
+        }
+        Participant p = participantRepository.findByGatheringIdAndUserId(id, userId)
+                .orElseThrow(() -> new IllegalStateException("참여하지 않은 모임이에요."));
+        if (p.isHost()) {
+            throw new IllegalStateException("주최자는 참여를 취소할 수 없어요. 모임을 없애려면 모임 삭제를 눌러 주세요.");
+        }
+        participantRepository.delete(p);
+        participantRepository.flush();
+        repository.decrementIfAbove1(id);
+    }
+
+    /**
+     * 모임 삭제 (주최자만). 참여 기록도 함께 지운다.
+     * @throws NotHostException 주최자가 아님
+     */
+    @Transactional
+    public void delete(Long id, Long userId) {
+        Gathering g = get(id);
+        if (!isHost(id, userId)) {
+            throw new NotHostException();
+        }
+        participantRepository.deleteAllByGatheringId(id);
+        repository.delete(g);
+    }
+
+    /**
+     * 주최자가 모임을 고칠 수 있는지 확인 (수정 화면을 열 때와 저장할 때 모두 사용).
+     * @throws NotHostException     주최자가 아님
+     * @throws IllegalStateException 이미 시작된 모임
+     */
+    public Gathering getForEdit(Long id, Long userId) {
+        Gathering g = get(id);
+        if (!isHost(id, userId)) {
+            throw new NotHostException();
+        }
+        if (!g.getStartAt().isAfter(Times.now())) {
+            throw new IllegalStateException("이미 시작된 모임은 수정할 수 없어요.");
+        }
+        return g;
+    }
+
+    /**
+     * 모임 수정 (주최자만, 시작 전에만).
+     * @throws IllegalArgumentException 정원을 지금 참여 인원보다 적게 줄이려는 경우
+     */
+    @Transactional
+    public void update(Long id, Long userId, GatheringCreateRequest req) {
+        getForEdit(id, userId);
+        int updated = repository.updateIfFits(id, req.title(), req.description(), req.tag(), req.placeName(),
+                req.latitude(), req.longitude(), req.startAt(), req.maxPeople());
+        if (updated == 0) {
+            throw new IllegalArgumentException(
+                    "지금 참여한 사람이 " + get(id).getCurrentPeople() + "명이라 정원을 그보다 적게 줄일 수 없어요.");
+        }
+    }
+
+    /** 내가 만든 모임 */
+    public List<Gathering> hostedBy(Long userId) {
+        return repository.findByMember(userId, true);
+    }
+
+    /** 내가 참여한 모임 (내가 만든 모임은 빼고) */
+    public List<Gathering> joinedBy(Long userId) {
+        return repository.findByMember(userId, false);
     }
 }

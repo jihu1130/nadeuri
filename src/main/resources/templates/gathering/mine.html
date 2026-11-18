@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 모임 - 나들이</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="form-page mine-page">
+<header class="topbar">
+  <a href="/" class="logo"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 10.2c0 5.1-7 11-7 11s-7-5.9-7-11a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></span><span>나들이</span></a>
+  <div th:replace="~{fragments/auth :: auth}"></div>
+</header>
+
+<div class="container">
+  <div class="flash" th:if="${message}" th:text="${message}"></div>
+  <div class="page-heading"><p class="eyebrow">내 모임</p><h1>내가 만든 모임과 참여한 모임</h1></div>
+
+
+  <section class="card mine-section" aria-labelledby="hostedTitle">
+    <div class="mine-section-head">
+      <h2 id="hostedTitle">내가 만든 모임</h2>
+      <a class="link-btn" th:href="@{/gatherings/new}">+ 새 모임</a>
+    </div>
+    <p class="mine-empty" th:if="${hostedUpcoming.isEmpty() and hostedPast.isEmpty()}">아직 만든 모임이 없어요.</p>
+    <div class="mine-list" th:unless="${hostedUpcoming.isEmpty()}">
+      <th:block th:each="g : ${hostedUpcoming}"><a th:replace="~{fragments/gathering-row :: row(${g}, false)}"></a></th:block>
+    </div>
+    <details class="mine-past" th:unless="${hostedPast.isEmpty()}">
+      <summary th:text="${'지난 모임 ' + hostedPast.size() + '개'}">지난 모임</summary>
+      <div class="mine-list">
+        <th:block th:each="g : ${hostedPast}"><a th:replace="~{fragments/gathering-row :: row(${g}, true)}"></a></th:block>
+      </div>
+    </details>
+  </section>
+
+  <section class="card mine-section" aria-labelledby="joinedTitle">
+    <div class="mine-section-head">
+      <h2 id="joinedTitle">참여한 모임</h2>
+      <a class="link-btn" href="/">모임 찾기</a>
+    </div>
+    <p class="mine-empty" th:if="${joinedUpcoming.isEmpty() and joinedPast.isEmpty()}">아직 참여한 모임이 없어요.</p>
+    <div class="mine-list" th:unless="${joinedUpcoming.isEmpty()}">
+      <th:block th:each="g : ${joinedUpcoming}"><a th:replace="~{fragments/gathering-row :: row(${g}, false)}"></a></th:block>
+    </div>
+    <details class="mine-past" th:unless="${joinedPast.isEmpty()}">
+      <summary th:text="${'지난 모임 ' + joinedPast.size() + '개'}">지난 모임</summary>
+      <div class="mine-list">
+        <th:block th:each="g : ${joinedPast}"><a th:replace="~{fragments/gathering-row :: row(${g}, true)}"></a></th:block>
+      </div>
+    </details>
+  </section>
+</div>
+</body>
+</html>

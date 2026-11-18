@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>모임 만들기 - 나들이</title>
+  <title th:text="${editId != null} ? '모임 수정 - 나들이' : '모임 만들기 - 나들이'">모임 만들기 - 나들이</title>
   <link rel="stylesheet" th:href="@{/css/app.css}">
   <link rel="stylesheet" th:href="@{/css/weather-picker.css}">
 </head>
@@ -14,24 +14,26 @@
 </header>
 
 <div class="container">
-  <div class="page-heading"><p class="eyebrow">모임 등록</p><h1>새 모임 만들기</h1><p class="page-intro">이름·활동·시간·장소·정원을 입력하면 주변 모임 검색에 등록됩니다.</p></div>
+  <div class="page-heading" th:if="${editId == null}"><p class="eyebrow">모임 등록</p><h1>새 모임 만들기</h1><p class="page-intro">이름·활동·시간·장소·정원을 입력하면 주변 모임 검색에 등록됩니다.</p></div>
+  <div class="page-heading" th:if="${editId != null}"><p class="eyebrow">모임 수정</p><h1>모임 정보 고치기</h1><p class="page-intro">바꾼 내용은 저장하면 바로 모임 상세와 주변 검색에 반영됩니다.</p></div>
 
   <div class="errors" th:if="${errors}">
     <p th:each="e : ${errors}" th:text="${e.defaultMessage}"></p>
   </div>
 
-  <form method="post" th:action="@{/gatherings}" class="card">
+  <!--/* 만들기·수정 공용 폼: editId가 있으면 수정 주소로 보낸다 */-->
+  <form method="post" th:action="${editId != null} ? @{/gatherings/{id}/edit(id=${editId})} : @{/gatherings}" class="card">
     <label for="title">모임 이름</label>
-    <input id="title" name="title" required maxlength="100" placeholder="예) 한강 노을 피크닉">
+    <input id="title" name="title" required maxlength="100" placeholder="예) 한강 노을 피크닉" th:value="${f.title}">
 
     <label for="tag">활동 종류</label>
     <select id="tag" name="tag" required>
-      <option th:each="t : ${tags}" th:value="${t.name()}" th:text="${t.emoji + ' ' + t.label}"></option>
+      <option th:each="t : ${tags}" th:value="${t.name()}" th:text="${t.emoji + ' ' + t.label}" th:selected="${t.name() == f.tag}"></option>
     </select>
 
     <!-- 날씨를 보면서 날짜·시간 고르기. 실제로 서버에 보내는 값은 숨은 칸 startAt (예: 2026-11-19T15:30) -->
     <label id="startAtLabel">시작 시간 <span class="field-help-inline">한국 시간</span></label>
-    <input type="hidden" id="startAt" name="startAt" required>
+    <input type="hidden" id="startAt" name="startAt" required th:value="${f.startAt}">
     <div class="wx-picker" aria-labelledby="startAtLabel">
       <div class="wx-source">
         <span id="wxSource">날씨 기준: 지도 중심</span>
@@ -62,7 +64,7 @@
     </div>
 
     <label for="maxPeople">최대 인원</label>
-    <input id="maxPeople" name="maxPeople" type="number" min="2" max="50" value="6" required>
+    <input id="maxPeople" name="maxPeople" type="number" min="2" max="50" required th:value="${f.maxPeople}">
     <p class="field-help">주최자를 포함한 총 인원입니다. 2명부터 50명까지 설정할 수 있습니다.</p>
 
     <label for="placeSearch">장소</label>
@@ -84,16 +86,16 @@
     </div>
     <p class="field-help">검색 결과를 선택하거나 지도에서 모임 장소를 클릭하세요.</p>
     <label class="visually-hidden" for="placeName">모임 장소 이름</label>
-    <input id="placeName" name="placeName" required placeholder="모임 장소 이름">
-    <input type="hidden" id="latitude" name="latitude">
-    <input type="hidden" id="longitude" name="longitude">
+    <input id="placeName" name="placeName" required placeholder="모임 장소 이름" th:value="${f.placeName}">
+    <input type="hidden" id="latitude" name="latitude" th:value="${f.latitude}">
+    <input type="hidden" id="longitude" name="longitude" th:value="${f.longitude}">
 
     <label for="description">모임 설명 <span class="field-help-inline">선택</span></label>
-    <textarea id="description" name="description" rows="4" maxlength="1000" placeholder="준비물이나 만날 위치를 적어 주세요."></textarea>
+    <textarea id="description" name="description" rows="4" maxlength="1000" placeholder="준비물이나 만날 위치를 적어 주세요." th:text="${f.description}"></textarea>
 
     <div class="form-actions">
-      <button class="btn" type="submit">모임 등록</button>
-      <a class="btn secondary" href="/">취소</a>
+      <button class="btn" type="submit" th:text="${editId != null} ? '수정 저장' : '모임 등록'">모임 등록</button>
+      <a class="btn secondary" th:href="${editId != null} ? @{/gatherings/{id}(id=${editId})} : @{/}">취소</a>
     </div>
   </form>
 </div>
@@ -121,9 +123,11 @@
     let byDate = {};                         // 'YYYY-MM-DD' → day
     let loadedKey = null, requestNo = 0;
 
-    // 기본값: 2시간 뒤 정시
+    // 처음 선택값: 수정·입력 오류로 다시 열면 그 시작 시간, 새 모임이면 2시간 뒤 정시
     const init = new Date(Date.now() + 2 * 3600e3); init.setMinutes(0, 0, 0);
     let sel = { date: ymd(init), hour: init.getHours(), minute: 0 };
+    const preset = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/.exec($('startAt').value || '');
+    if (preset) sel = { date: preset[1], hour: +preset[2], minute: [0, 15, 30, 45].includes(+preset[3]) ? +preset[3] : 0 };
 
     function dateOf(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
     function selectedDateTime() { const d = dateOf(sel.date); d.setHours(sel.hour, sel.minute, 0, 0); return d; }
@@ -324,7 +328,14 @@
   })();
 
   // 카카오 지도를 못 불러오면 기본 위치(여의도) 날씨라도 보여 준다
-  if (!window.kakao?.maps) weatherPicker.load(37.5283, 126.9294, '기본 위치(여의도)');
+  // (수정 화면처럼 저장된 장소가 있으면 그 장소 날씨)
+  if (!window.kakao?.maps) {
+    if ($('latitude').value && $('longitude').value) {
+      weatherPicker.load(+$('latitude').value, +$('longitude').value, `선택한 장소 · ${$('placeName').value}`);
+    } else {
+      weatherPicker.load(37.5283, 126.9294, '기본 위치(여의도)');
+    }
+  }
 
   window.kakao?.maps && kakao.maps.load(() => {
     const map = new kakao.maps.Map($('pickMap'), {
@@ -336,8 +347,12 @@
     const geocoder = new kakao.maps.services.Geocoder();
     let myPos = null, myOverlay = null, toastTimer = null;
 
-    // 장소를 고르기 전에는 지도 중심 날씨를 보여 준다
-    weatherPicker.load(37.5283, 126.9294, '지도 중심 (장소를 고르면 그 장소 날씨로 바뀌어요)');
+    // 수정·입력 오류로 다시 열었으면 저장된 장소를 지도에 표시하고 그 장소 날씨를,
+    // 새 모임이면 장소를 고르기 전까지 지도 중심 날씨를 보여 준다
+    const presetPlace = $('latitude').value && $('longitude').value;
+    if (!presetPlace) {
+      weatherPicker.load(37.5283, 126.9294, '지도 중심 (장소를 고르면 그 장소 날씨로 바뀌어요)');
+    }
 
     function showToast(msg) {
       const t = $('pickMapToast');
@@ -366,8 +381,11 @@
       button.classList.add('is-loading');
       navigator.geolocation.getCurrentPosition(p => {
         showMyLocation(p.coords.latitude, p.coords.longitude);
-        if (map.getLevel() > 4) map.setLevel(4);
-        map.panTo(myPos);
+        // 처음 열 때 이미 장소가 있으면(수정 화면) 지도를 내 위치로 끌고 가지 않는다
+        if (fromButton || !$('latitude').value) {
+          if (map.getLevel() > 4) map.setLevel(4);
+          map.panTo(myPos);
+        }
         if (!$('latitude').value) {
           weatherPicker.load(p.coords.latitude, p.coords.longitude, '내 위치 (장소를 고르면 그 장소 날씨로 바뀌어요)');
         }
@@ -385,7 +403,12 @@
       }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
     }
     $('pickLocateButton').addEventListener('click', () => goToMyLocation(true));
-    goToMyLocation(false); // 처음 열 때도 내 위치 근처를 보여 준다 (실패하면 조용히 여의도)
+    goToMyLocation(false); // 처음 열 때도 내 위치를 표시한다 (새 모임이면 지도도 옮김, 실패하면 조용히 넘어감)
+    if (presetPlace) {
+      const saved = new kakao.maps.LatLng(+$('latitude').value, +$('longitude').value);
+      map.setCenter(saved);
+      choose(saved, $('placeName').value || null);
+    }
 
     function choose(latlng, name) {
       marker.setPosition(latlng);

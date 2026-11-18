@@ -274,3 +274,43 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 @keyframes research-in { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @media (max-width: 520px) { .research-button { top: 56px; padding: 8px 13px; font-size: 12px; } }
 @media (prefers-reduced-motion: reduce) { .research-button { animation: none; } }
+
+/* 모임 상세: 참여자 목록 */
+.participants-card .card-heading { margin-bottom: 12px; }
+.participants-empty { margin: 0; color: var(--muted); font-size: 13px; }
+.participant-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.participant-list li { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px 5px 5px;
+  border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 13px; }
+.participant-list li.is-me { border-color: var(--yellow); background: var(--yellow-wash); }
+.participant-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex: none; }
+.participant-avatar.initial { display: inline-flex; align-items: center; justify-content: center;
+  background: var(--yellow-soft); color: #6b5512; font-size: 12px; font-weight: 750; }
+.participant-name { max-width: 10em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.participant-badge { padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 750; }
+.participant-badge.host { background: var(--yellow); color: #30270f; }
+.participant-badge.me { background: #efeee9; color: #5b574b; }
+
+/* 모임 상세: 아래쪽 버튼 */
+.detail-actions { display: grid; gap: 8px; }
+.detail-actions form { margin: 0; }
+.detail-note { margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
+.btn.danger { border-color: #e4b4ad; background: #fff; color: var(--error); }
+.btn.danger:hover { border-color: var(--error); background: #fdf1ef; }
+
+/* 내 모임 */
+.mine-section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.mine-section-head h2 { margin: 0; font-size: 17px; }
+.mine-empty { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.mine-list { display: grid; }
+.mine-item { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-top: 1px solid #f0ede6; }
+.mine-item:hover { background: var(--yellow-wash); }
+.mine-item.is-past { opacity: .6; }
+.mine-emoji { display: inline-flex; width: 38px; height: 38px; flex: none; align-items: center; justify-content: center;
+  border-radius: 11px; background: var(--yellow-soft); font-size: 19px; }
+.mine-copy { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.mine-copy strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.mine-meta { overflow: hidden; color: var(--muted); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.mine-count { flex: none; color: #74601c; font-size: 12px; font-weight: 700; }
+.mine-past { margin-top: 8px; }
+.mine-past summary { padding: 8px 4px; color: var(--muted); font-size: 13px; cursor: pointer; }
+@media (max-width: 520px) { .auth .link-btn { padding: 5px 4px; } }
