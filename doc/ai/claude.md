@@ -17,7 +17,7 @@ Korean web app: find people nearby (or with the same purpose) to do outdoor acti
 
 ## Environment
 - OS: Windows 10, PowerShell 5.1. Project root: `C:\Users\User\Desktop\나들이\nadeuri` (moved by owner before 2026-11-18; IntelliJ project opened at `Desktop\나들이`).
-- Not a git repo yet (`.gitignore` exists).
+- Git: repo at https://github.com/jihu1130/nadeuri (branch `main`, first push 2026-11-18). Repo-local author `jihu1130 <jihu1130@users.noreply.github.com>` (keeps the owner's real email out of history). Commit/push only when the owner asks; scan for secrets before each commit.
 - No Docker installed. No global Gradle — use `.\gradlew.bat`. No `mysql` CLI on PATH. `python` is the Windows Store stub — use `py -I`.
 - **Gradle tests fail with `ClassNotFoundException` because of the Korean path.** Workaround: `robocopy <project> <scratchpad>\nadeuri /MIR /XD build .gradle .idea`, then run `.\gradlew.bat test` in the copy. Running the app from IntelliJ is unaffected.
 - Owner usually runs the app from IntelliJ on :8888. If port 8888 is busy, the owner's instance is running — test against it, or ask before starting another one. For UI checks of unreleased Java changes, run the scratchpad copy with `--server.port=8899 --spring.profiles.active=h2` (Kakao map tiles won't load there: JS SDK domain is only :8888).
