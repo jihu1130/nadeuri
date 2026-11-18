@@ -63,6 +63,14 @@ kakao:
 ```
 > Windows에서 프로젝트 경로에 한글이 있으면(예: `바탕화면\나들이\nadeuri`) Gradle 테스트가 `ClassNotFoundException`으로 실패합니다. 영문 경로로 옮기거나 복사해서 실행하세요. IntelliJ에서 앱을 실행하는 데는 문제가 없습니다.
 
+## DB 테이블 관리 (Flyway)
+- 테이블 구조는 `src/main/resources/db/migration/` 안의 SQL 파일로 관리합니다. 앱이 뜰 때 Flyway가 아직 적용하지 않은 파일을 순서대로 실행합니다.
+- `V1__init.sql`: 처음 테이블(gathering, participant, users)
+- **테이블을 바꿀 때는 기존 파일을 고치지 말고** `V2__설명.sql`처럼 새 파일을 추가하세요. 예: `V2__add_gathering_cover_image.sql`
+- Hibernate는 테이블을 직접 바꾸지 않고 코드와 맞는지 **확인만**(`ddl-auto: validate`) 합니다. 맞지 않으면 앱이 뜨지 않으니, 엔티티를 바꾸면 SQL 파일도 같이 추가하세요.
+- Flyway 도입 전부터 쓰던 DB는 V1을 실행하지 않고 "이미 V1"로 기록만 합니다(`baseline-on-migrate`). 데이터는 그대로입니다.
+- H2(테스트)는 Flyway를 끄고 Hibernate가 테이블을 만듭니다.
+
 ## 외부 API 설정
 
 ### 카카오맵
@@ -98,7 +106,7 @@ kakao:
 | `KMA_SERVICE_KEY` | 기상청 인증키 |
 | `KAKAO_JS_KEY` | 카카오 JavaScript 키 |
 | `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET` | 카카오 로그인용 키 (운영 도메인의 리다이렉트 URI도 따로 등록해야 합니다) |
-| `DDL_AUTO` | 기본값은 `validate`입니다. 스키마는 미리 만들어 두거나 마이그레이션 도구를 쓰세요 |
+| `DDL_AUTO` | 기본값은 `validate`입니다. 테이블은 앱이 뜰 때 Flyway가 `db/migration` 의 SQL로 만들고 바꿉니다 |
 
 ## 프로젝트 구조
 
@@ -184,7 +192,8 @@ nadeuri
 - [x] 지도 이동 후 "이 지역에서 다시 검색"
 - [ ] WebSocket(STOMP) 모임 채팅
 - [ ] 데이터가 늘어나면 MySQL 공간 인덱스(`ST_Distance_Sphere`)로 검색 전환
-- [ ] DB 마이그레이션 도구 도입 (Flyway)
+- [x] DB 마이그레이션 도구 도입 (Flyway)
+- [x] 한국어 오류 화면 (404·400·403·500)
 
 ## 작업 기록
 날짜별 작업 내용은 [`doc/user`](doc/user) 폴더에 `YYMMDD.md` 형식으로 남깁니다.

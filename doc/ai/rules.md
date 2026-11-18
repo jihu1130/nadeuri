@@ -24,6 +24,8 @@
 ## Workflow
 - Windows PowerShell: chain with `;`, use `.\gradlew.bat`. Use `--console=plain -q` for builds.
 - After code changes: `.\gradlew.bat test` must pass. Add/adjust tests for logic changes (service/client level).
+- Schema changes (Flyway since 2026-11-18): never edit an applied `src/main/resources/db/migration/V*.sql`; add `V{n+1}__desc.sql` (MySQL 8 syntax) and change the entity in the same commit. Hibernate runs `ddl-auto: validate` (local and prod), so a mismatch stops startup. H2 tests use create-drop with Flyway off, so check new migrations against a temporary MySQL database (create it, start the app with env `SPRING_DATASOURCE_URL` pointing at it, then drop it) — never against the owner's `nadeuri` DB.
+- Templates: use Thymeleaf comments `<!--/* */-->`, not HTML comments (they reach the browser). Errors render through `templates/error.html` (404/400/403/5xx; never show exception text).
 - For UI changes: verify in the browser pane at `http://localhost:8888` (owner's IntelliJ instance usually running; ask owner to restart after Java changes).
 - When an external API fails, call it directly (curl.exe) to read the real error body before changing code.
 - Files can disappear if the owner moves folders — if edits fail with "file does not exist", list the tree and ask before recreating.

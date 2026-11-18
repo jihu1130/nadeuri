@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<!--/*
+  공통 오류 화면. Spring Boot가 브라우저 요청에서 오류가 나면 이 화면을 쓴다.
+  (API 호출 /api/** 는 JSON으로 오류를 받는다)
+  status: 404 없는 주소·모임 / 400 잘못된 주소 형식 / 403 권한·보안 토큰 / 그 밖 5xx 서버 오류
+  보안을 위해 오류 내용(예외 메시지, 스택)은 화면에 보여 주지 않는다.
+*/-->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${(status == 404 ? '페이지를 찾을 수 없어요' : (status != null and status < 500 ? '요청을 처리할 수 없어요' : '잠시 문제가 생겼어요')) + ' - 나들이'}">오류 - 나들이</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="form-page error-page">
+<header class="topbar">
+  <a href="/" class="logo"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 10.2c0 5.1-7 11-7 11s-7-5.9-7-11a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></span><span>나들이</span></a>
+</header>
+
+<main class="container error-container">
+  <div class="card error-card" th:switch="${status}">
+    <p class="error-code" th:text="${status}">404</p>
+
+    <th:block th:case="404">
+      <h1>찾는 모임이나 페이지가 없어요</h1>
+      <p class="error-text">모임이 삭제됐거나 주소가 바뀌었을 수 있어요.</p>
+    </th:block>
+    <th:block th:case="403">
+      <h1>이 요청은 처리할 수 없어요</h1>
+      <p class="error-text">권한이 없거나 화면을 오래 열어 둬서 보안 확인이 만료됐어요. 페이지를 새로고침한 뒤 다시 시도해 주세요.</p>
+    </th:block>
+    <th:block th:case="*">
+      <th:block th:if="${status != null and status < 500}">
+        <h1>요청을 처리할 수 없어요</h1>
+        <p class="error-text">주소나 입력값이 올바르지 않아요. 확인한 뒤 다시 시도해 주세요.</p>
+      </th:block>
+      <th:block th:unless="${status != null and status < 500}">
+        <h1>잠시 문제가 생겼어요</h1>
+        <p class="error-text">서버에서 요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+      </th:block>
+    </th:block>
+
+    <div class="error-actions">
+      <a class="btn" href="/">홈으로 가기</a>
+      <a class="btn secondary" href="javascript:history.back()">이전 화면</a>
+    </div>
+  </div>
+</main>
+</body>
+</html>

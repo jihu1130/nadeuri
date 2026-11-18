@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(indexes = @Index(columnList = "latitude, longitude"))
+@Table(indexes = @Index(name = "idx_gathering_lat_lng", columnList = "latitude, longitude"))
 public class Gathering {
 
     @Id

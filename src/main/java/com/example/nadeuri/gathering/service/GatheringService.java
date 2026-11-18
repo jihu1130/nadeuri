@@ -5,6 +5,7 @@ import com.example.nadeuri.gathering.domain.Participant;
 import com.example.nadeuri.gathering.dto.GatheringCreateRequest;
 import com.example.nadeuri.gathering.dto.ParticipantView;
 import com.example.nadeuri.gathering.exception.AlreadyJoinedException;
+import com.example.nadeuri.gathering.exception.GatheringNotFoundException;
 import com.example.nadeuri.gathering.exception.NotHostException;
 import com.example.nadeuri.gathering.repository.GatheringRepository;
 import com.example.nadeuri.gathering.repository.ParticipantRepository;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+
 
 @Service
 @RequiredArgsConstructor
@@ -66,7 +67,7 @@ public class GatheringService {
 
     public Gathering get(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("모임을 찾을 수 없습니다: " + id));
+                .orElseThrow(() -> new GatheringNotFoundException(id));
     }
 
     public boolean hasJoined(Long gatheringId, Long userId) {

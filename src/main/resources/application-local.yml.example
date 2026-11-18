@@ -6,7 +6,7 @@ spring:
     password: "your-db-password"
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate   # 테이블은 Flyway가 관리 (db/migration). Hibernate는 확인만
 
 kma:
   service-key: "공공데이터포털 Decoding 인증키"

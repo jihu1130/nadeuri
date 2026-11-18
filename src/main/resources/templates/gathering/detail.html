@@ -48,7 +48,7 @@
   </div>
 
   <div class="card weather-card">
-    <div class="card-heading"><div><p class="eyebrow">기상청 단기예보</p><h2>모임 시간대 날씨</h2></div></div>
+    <div class="card-heading"><div><p class="eyebrow">기상청 예보</p><h2>모임 시간대 날씨</h2></div></div>
     <div th:if="${weather.available}" style="display:flex; align-items:center; gap:12px; margin-top:8px">
       <span class="weather-big" th:text="${weather.emoji()}"></span>
       <div>

@@ -314,3 +314,11 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 .mine-past { margin-top: 8px; }
 .mine-past summary { padding: 8px 4px; color: var(--muted); font-size: 13px; cursor: pointer; }
 @media (max-width: 520px) { .auth .link-btn { padding: 5px 4px; } }
+
+/* 공통 오류 화면 */
+.error-container { display: grid; min-height: calc(100dvh - 140px); place-items: center; }
+.error-card { width: 100%; max-width: 460px; text-align: center; }
+.error-code { margin: 0 0 6px; color: var(--yellow-strong); font-size: 44px; font-weight: 800; letter-spacing: -1px; }
+.error-card h1 { margin: 0 0 8px; font-size: 20px; }
+.error-text { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.error-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
