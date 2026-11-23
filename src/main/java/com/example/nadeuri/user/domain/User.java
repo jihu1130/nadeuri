@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * 서비스 회원. 가입 경로(provider)와 그 경로에서의 식별값(providerId) 조합이 유일하다.
@@ -27,6 +28,10 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** 화면·채팅·(나중에) 프로필 주소에 쓰는 공개 식별자 (무작위 UUID). 순번 id는 DB 안에서만 쓴다 */
+    @Column(name = "public_id", nullable = false, unique = true, length = 36, updatable = false)
+    private String publicId = UUID.randomUUID().toString();
 
     @Column(nullable = false, length = 20)
     private String provider;

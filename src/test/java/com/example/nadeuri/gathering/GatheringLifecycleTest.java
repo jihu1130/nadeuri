@@ -140,7 +140,7 @@ class GatheringLifecycleTest {
         assertThat(g.getEndAt().getMinute()).isEqualTo(30);
 
         // 수정 화면: 목록에 없는 150분도 선택된 채로 나온다
-        mvc.perform(get("/gatherings/" + g.getId() + "/edit").with(oauth2Login().oauth2User(login(host))))
+        mvc.perform(get("/gatherings/" + g.getPublicId() + "/edit").with(oauth2Login().oauth2User(login(host))))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("<option value=\"150\" selected=\"selected\">2시간 30분</option>")));
     }
@@ -181,12 +181,12 @@ class GatheringLifecycleTest {
         Gathering ongoing = saved("상세-진행", -30, 90, 5);
         Gathering ended = saved("상세-종료", -180, -60, 5);
 
-        mvc.perform(get("/gatherings/" + ongoing.getId()).with(oauth2Login().oauth2User(login(a))))
+        mvc.perform(get("/gatherings/" + ongoing.getPublicId()).with(oauth2Login().oauth2User(login(a))))
                 .andExpect(content().string(containsString("status-badge ongoing")))
                 .andExpect(content().string(containsString("늦게라도 합류할 수 있어요")))
                 .andExpect(content().string(containsString(">참여하기<")));
 
-        mvc.perform(get("/gatherings/" + ended.getId()).with(oauth2Login().oauth2User(login(a))))
+        mvc.perform(get("/gatherings/" + ended.getPublicId()).with(oauth2Login().oauth2User(login(a))))
                 .andExpect(content().string(containsString("status-badge ended")))
                 .andExpect(content().string(containsString("끝난 모임")))
                 .andExpect(content().string(not(containsString(">참여하기<"))));

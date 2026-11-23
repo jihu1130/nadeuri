@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
  */
 @ResponseStatus(HttpStatus.NOT_FOUND)
 public class GatheringNotFoundException extends RuntimeException {
-    public GatheringNotFoundException(Long id) {
+    public GatheringNotFoundException(Object id) {
         super("모임을 찾을 수 없습니다: " + id);
     }
 }

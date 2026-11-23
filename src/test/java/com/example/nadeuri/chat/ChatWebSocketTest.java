@@ -110,7 +110,7 @@ class ChatWebSocketTest {
         }
     }
 
-    private WebSocketSession connect(Long gatheringId, String cookie, String origin, Inbox inbox) throws Exception {
+    private WebSocketSession connect(String gatheringId, String cookie, String origin, Inbox inbox) throws Exception {
         WebSocketHttpHeaders headers = new WebSocketHttpHeaders();
         if (cookie != null) headers.add("Cookie", cookie);
         headers.add("Origin", origin);
@@ -132,8 +132,8 @@ class ChatWebSocketTest {
         gatherings.join(g.getId(), a.getId());
 
         Inbox hostInbox = new Inbox(), aInbox = new Inbox();
-        WebSocketSession hostWs = connect(g.getId(), sessionCookie(host), base(), hostInbox);
-        WebSocketSession aWs = connect(g.getId(), sessionCookie(a), base(), aInbox);
+        WebSocketSession hostWs = connect(g.getPublicId(), sessionCookie(host), base(), hostInbox);
+        WebSocketSession aWs = connect(g.getPublicId(), sessionCookie(a), base(), aInbox);
         // 서버가 두 연결을 방에 넣을 때까지 잠깐 기다림
         for (int i = 0; i < 50 && handler.connectionCount(g.getId()) < 2; i++) Thread.sleep(20);
 
@@ -146,7 +146,7 @@ class ChatWebSocketTest {
             assertThat(body.path("type").asText()).isEqualTo("message");
             assertThat(body.path("message").path("content").asText()).isEqualTo("안녕하세요!");
             assertThat(body.path("message").path("nickname").asText()).isEqualTo("참여자");
-            assertThat(body.path("message").path("userId").asLong()).isEqualTo(a.getId());
+            assertThat(body.path("message").path("userId").asText()).isEqualTo(a.getPublicId());
         }
 
         // 빈 메시지는 보낸 사람에게만 오류가 간다
@@ -165,7 +165,7 @@ class ChatWebSocketTest {
         User outsider = user("구경꾼");
 
         Inbox inbox = new Inbox();
-        connect(g.getId(), sessionCookie(outsider), base(), inbox);
+        connect(g.getPublicId(), sessionCookie(outsider), base(), inbox);
 
         CloseStatus status = inbox.closed.poll(5, TimeUnit.SECONDS);
         assertThat(status).isNotNull();
@@ -180,8 +180,8 @@ class ChatWebSocketTest {
         gatherings.join(g.getId(), a.getId());
 
         Inbox hostInbox = new Inbox(), aInbox = new Inbox();
-        WebSocketSession hostWs = connect(g.getId(), sessionCookie(host), base(), hostInbox);
-        connect(g.getId(), sessionCookie(a), base(), aInbox);
+        WebSocketSession hostWs = connect(g.getPublicId(), sessionCookie(host), base(), hostInbox);
+        connect(g.getPublicId(), sessionCookie(a), base(), aInbox);
         for (int i = 0; i < 50 && handler.connectionCount(g.getId()) < 2; i++) Thread.sleep(20);
 
         gatherings.leave(g.getId(), a.getId());   // 연결은 열어 둔 채로 참여 취소
@@ -198,10 +198,10 @@ class ChatWebSocketTest {
         User host = user("주최");
         Gathering g = gathering(host);
 
-        assertThatThrownBy(() -> connect(g.getId(), null, base(), new Inbox()))
+        assertThatThrownBy(() -> connect(g.getPublicId(), null, base(), new Inbox()))
                 .as("로그인 안 함").isNotNull();
         String cookie = sessionCookie(host);
-        assertThatThrownBy(() -> connect(g.getId(), cookie, "https://evil.example", new Inbox()))
+        assertThatThrownBy(() -> connect(g.getPublicId(), cookie, "https://evil.example", new Inbox()))
                 .as("다른 사이트(Origin)").isNotNull();
     }
 }

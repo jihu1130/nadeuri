@@ -9,8 +9,12 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface GatheringRepository extends JpaRepository<Gathering, Long> {
+
+    /** 주소에 쓰는 공개 식별자(UUID)로 찾기 */
+    Optional<Gathering> findByPublicId(String publicId);
 
     /**
      * 반경 검색 (하버사인 공식). MySQL과 H2 모두에서 동작한다.

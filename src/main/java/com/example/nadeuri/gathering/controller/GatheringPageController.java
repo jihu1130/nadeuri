@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
@@ -56,44 +57,46 @@ public class GatheringPageController {
             return form(model, GatheringFormView.from(req), null, binding.getAllErrors());
         }
         Gathering g = service.create(req, user.getId());
-        return "redirect:/gatherings/" + g.getId();
+        return "redirect:/gatherings/" + g.getPublicId();
     }
 
     /** 모임 수정 화면: 만들기 화면을 그대로 쓰고 저장된 값을 채워 넣는다 (주최자만, 시작 전에만) */
     @GetMapping("/gatherings/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model, RedirectAttributes ra,
+    public String editForm(@PathVariable("id") UUID publicId, Model model, RedirectAttributes ra,
                            @AuthenticationPrincipal LoginUser user) {
+        Long id = service.idOf(publicId);
         try {
             Gathering g = service.getForEdit(id, user.getId());
-            return form(model, GatheringFormView.from(g), id, null);
+            return form(model, GatheringFormView.from(g), publicId, null);
         } catch (NotHostException | IllegalStateException e) {
             ra.addFlashAttribute("message", e.getMessage());
-            return "redirect:/gatherings/" + id;
+            return "redirect:/gatherings/" + publicId;
         }
     }
 
     @PostMapping("/gatherings/{id}/edit")
-    public String edit(@PathVariable Long id, @Valid @ModelAttribute GatheringCreateRequest req, BindingResult binding,
+    public String edit(@PathVariable("id") UUID publicId, @Valid @ModelAttribute GatheringCreateRequest req, BindingResult binding,
                        Model model, RedirectAttributes ra, @AuthenticationPrincipal LoginUser user) {
+        Long id = service.idOf(publicId);
         if (binding.hasErrors()) {
-            return form(model, GatheringFormView.from(req), id, binding.getAllErrors());
+            return form(model, GatheringFormView.from(req), publicId, binding.getAllErrors());
         }
         try {
             service.update(id, user.getId(), req);
         } catch (NotHostException | IllegalStateException e) {
             ra.addFlashAttribute("message", e.getMessage());
-            return "redirect:/gatherings/" + id;
+            return "redirect:/gatherings/" + publicId;
         } catch (IllegalArgumentException e) {
             // 정원을 참여 인원보다 적게 줄이려는 경우: 입력한 값을 그대로 두고 다시 보여 준다
-            return form(model, GatheringFormView.from(req), id,
+            return form(model, GatheringFormView.from(req), publicId,
                     List.of(new ObjectError("gathering", e.getMessage())));
         }
         ra.addFlashAttribute("message", "모임 정보를 수정했어요.");
-        return "redirect:/gatherings/" + id;
+        return "redirect:/gatherings/" + publicId;
     }
 
-    /** 만들기·수정 공용 화면. editId가 있으면 수정 모드 */
-    private String form(Model model, GatheringFormView values, Long editId, List<ObjectError> errors) {
+    /** 만들기·수정 공용 화면. editId(모임의 공개 UUID)가 있으면 수정 모드 */
+    private String form(Model model, GatheringFormView values, UUID editId, List<ObjectError> errors) {
         model.addAttribute("tags", ActivityTag.values());
         model.addAttribute("f", values);
         model.addAttribute("editId", editId);
@@ -102,8 +105,9 @@ public class GatheringPageController {
     }
 
     @GetMapping("/gatherings/{id}")
-    public String detail(@PathVariable Long id, Model model, @AuthenticationPrincipal LoginUser user) {
-        Gathering g = service.get(id);
+    public String detail(@PathVariable("id") UUID publicId, Model model, @AuthenticationPrincipal LoginUser user) {
+        Gathering g = service.get(publicId);
+        Long id = g.getId();
         List<ParticipantView> participants = service.participants(id);
         Long me = user == null ? null : user.getId();
         model.addAttribute("g", g);
@@ -146,23 +150,25 @@ public class GatheringPageController {
     }
 
     @PostMapping("/gatherings/{id}/leave")
-    public String leave(@PathVariable Long id, RedirectAttributes ra, @AuthenticationPrincipal LoginUser user) {
+    public String leave(@PathVariable("id") UUID publicId, RedirectAttributes ra, @AuthenticationPrincipal LoginUser user) {
+        Long id = service.idOf(publicId);
         try {
             service.leave(id, user.getId());
             ra.addFlashAttribute("message", "참여를 취소했어요.");
         } catch (IllegalStateException e) {
             ra.addFlashAttribute("message", e.getMessage());
         }
-        return "redirect:/gatherings/" + id;
+        return "redirect:/gatherings/" + publicId;
     }
 
     @PostMapping("/gatherings/{id}/delete")
-    public String delete(@PathVariable Long id, RedirectAttributes ra, @AuthenticationPrincipal LoginUser user) {
+    public String delete(@PathVariable("id") UUID publicId, RedirectAttributes ra, @AuthenticationPrincipal LoginUser user) {
+        Long id = service.idOf(publicId);
         try {
             service.delete(id, user.getId());
         } catch (NotHostException e) {
             ra.addFlashAttribute("message", e.getMessage());
-            return "redirect:/gatherings/" + id;
+            return "redirect:/gatherings/" + publicId;
         }
         ra.addFlashAttribute("message", "모임을 삭제했어요.");
         return "redirect:/me/gatherings";
@@ -174,12 +180,13 @@ public class GatheringPageController {
      * 카카오 로그인이 끝나면 여기로 돌려보내고, 여기서 다시 상세 화면으로 보낸다.
      */
     @GetMapping("/gatherings/{id}/sign-in")
-    public String signInAndReturn(@PathVariable Long id) {
-        return "redirect:/gatherings/" + id;
+    public String signInAndReturn(@PathVariable("id") UUID publicId) {
+        return "redirect:/gatherings/" + publicId;
     }
 
     @PostMapping("/gatherings/{id}/join")
-    public String join(@PathVariable Long id, RedirectAttributes ra, @AuthenticationPrincipal LoginUser user) {
+    public String join(@PathVariable("id") UUID publicId, RedirectAttributes ra, @AuthenticationPrincipal LoginUser user) {
+        Long id = service.idOf(publicId);
         try {
             service.join(id, user.getId());
             ra.addFlashAttribute("message", "참여 신청이 완료됐어요!");
@@ -189,6 +196,6 @@ public class GatheringPageController {
         } catch (IllegalStateException e) {
             ra.addFlashAttribute("message", e.getMessage());
         }
-        return "redirect:/gatherings/" + id;
+        return "redirect:/gatherings/" + publicId;
     }
 }

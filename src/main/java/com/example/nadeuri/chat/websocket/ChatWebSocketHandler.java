@@ -19,12 +19,13 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 모임 채팅방 연결: /ws/gatherings/{id}/chat
+ * 모임 채팅방 연결: /ws/gatherings/{모임 공개 UUID}/chat
  * <ul>
  *   <li>로그인은 Spring Security가 연결 요청(HTTP)에서 확인한다. 다른 사이트에서 여는 연결은 막는다(같은 출처만).</li>
  *   <li>연결할 때 그 모임 참여자인지 확인하고, 아니면 바로 끊는다.</li>
@@ -38,7 +39,9 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class ChatWebSocketHandler extends TextWebSocketHandler {
 
-    private static final Pattern PATH = Pattern.compile("/ws/gatherings/(\\d+)/chat/?$");
+    /** /ws/gatherings/{모임 공개 UUID}/chat */
+    private static final Pattern PATH = Pattern.compile(
+            "/ws/gatherings/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/chat/?$");
     private static final String GATHERING = "gatheringId";
     private static final String USER = "userId";
 
@@ -50,7 +53,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession raw) throws Exception {
-        Long gatheringId = gatheringId(raw);
+        UUID publicId = gatheringPublicId(raw);
+        Long gatheringId = publicId == null ? null : chatService.gatheringIdOf(publicId);
         Long userId = userId(raw);
         if (gatheringId == null || userId == null || !chatService.canChat(gatheringId, userId)) {
             raw.close(CloseStatus.POLICY_VIOLATION.withReason("not a participant"));
@@ -145,10 +149,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return room == null ? 0 : room.size();
     }
 
-    private static Long gatheringId(WebSocketSession session) {
+    private static UUID gatheringPublicId(WebSocketSession session) {
         if (session.getUri() == null) return null;
         Matcher m = PATH.matcher(session.getUri().getPath());
-        return m.find() ? Long.valueOf(m.group(1)) : null;
+        return m.find() ? UUID.fromString(m.group(1)) : null;
     }
 
     private static Long userId(WebSocketSession session) {

@@ -2,10 +2,14 @@ package com.example.nadeuri.chat.dto;
 
 import java.time.LocalDateTime;
 
-/** 화면·WebSocket으로 보내는 메시지 한 줄 (메시지 + 보낸 사람 닉네임·사진) */
+/**
+ * 화면·WebSocket으로 보내는 메시지 한 줄 (메시지 + 보낸 사람 닉네임·사진).
+ * userId는 회원의 공개 UUID다 (DB 순번 id는 밖으로 내보내지 않는다). 탈퇴한 회원이면 null.
+ * id는 메시지 순번으로, "이전 메시지 더 보기"·다시 연결 때 기준점으로만 쓴다.
+ */
 public record ChatMessageView(
         Long id,
-        Long userId,
+        String userId,
         String nickname,
         String profileImageUrl,
         String content,

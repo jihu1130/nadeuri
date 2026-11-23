@@ -3,7 +3,7 @@
 <body>
 <!--/* 내 모임 목록의 모임 한 줄. past=true면 끝난 모임으로 흐리게. 상태 배지는 컨트롤러가 넣은 now 기준 */-->
 <a th:fragment="row(g, past)" class="mine-item" th:classappend="${past} ? 'is-past'"
-   th:href="@{/gatherings/{id}(id=${g.id})}" th:with="st=${g.statusAt(now)}">
+   th:href="@{/gatherings/{id}(id=${g.publicId})}" th:with="st=${g.statusAt(now)}">
   <span class="mine-emoji" aria-hidden="true" th:text="${g.tag.emoji}">🚶</span>
   <span class="mine-copy">
     <span class="mine-title-row">

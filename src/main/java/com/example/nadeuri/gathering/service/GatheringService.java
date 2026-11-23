@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 
 @Service
@@ -72,6 +73,17 @@ public class GatheringService {
     public Gathering get(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new GatheringNotFoundException(id));
+    }
+
+    /** 주소의 공개 식별자(UUID)로 모임 찾기. 없으면 404 */
+    public Gathering get(UUID publicId) {
+        return repository.findByPublicId(publicId.toString())
+                .orElseThrow(() -> new GatheringNotFoundException(publicId));
+    }
+
+    /** 주소의 UUID → DB 안에서 쓰는 순번 id. 없으면 404 */
+    public Long idOf(UUID publicId) {
+        return get(publicId).getId();
     }
 
     public boolean hasJoined(Long gatheringId, Long userId) {

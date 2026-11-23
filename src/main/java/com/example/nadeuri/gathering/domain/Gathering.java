@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Getter
@@ -18,6 +19,10 @@ public class Gathering {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    /** 주소·API·채팅에 쓰는 공개 식별자 (무작위 UUID). 순번 id는 DB 안에서만 쓴다 */
+    @Column(name = "public_id", nullable = false, unique = true, length = 36, updatable = false)
+    private String publicId = UUID.randomUUID().toString();
 
     @Column(nullable = false, length = 100)
     private String title;

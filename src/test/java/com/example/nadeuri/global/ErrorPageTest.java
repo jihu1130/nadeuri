@@ -33,7 +33,7 @@ class ErrorPageTest {
 
     @Test
     void 없는_모임은_404_한국어_화면() {
-        ResponseEntity<String> r = getHtml("/gatherings/987654321");
+        ResponseEntity<String> r = getHtml("/gatherings/00000000-0000-4000-8000-000000000000");   // 없는 모임 UUID
         assertThat(r.getStatusCode().value()).isEqualTo(404);
         assertThat(r.getBody()).contains("찾는 모임이나 페이지가 없어요").contains("홈으로 가기")
                 .doesNotContain("Whitelabel").doesNotContain("Exception");

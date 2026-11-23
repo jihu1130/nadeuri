@@ -18,7 +18,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      */
     @Query("""
             SELECT new com.example.nadeuri.chat.dto.ChatMessageView(
-                       m.id, m.userId, u.nickname, u.profileImageUrl, m.content, m.createdAt)
+                       m.id, u.publicId, u.nickname, u.profileImageUrl, m.content, m.createdAt)
             FROM ChatMessage m LEFT JOIN User u ON u.id = m.userId
             WHERE m.gatheringId = :gatheringId AND m.id < :beforeId
             ORDER BY m.id DESC
@@ -29,7 +29,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     /** id가 afterId보다 큰 메시지를 오래된 순으로 (연결이 끊겼다 다시 붙었을 때 빠진 것 채우기) */
     @Query("""
             SELECT new com.example.nadeuri.chat.dto.ChatMessageView(
-                       m.id, m.userId, u.nickname, u.profileImageUrl, m.content, m.createdAt)
+                       m.id, u.publicId, u.nickname, u.profileImageUrl, m.content, m.createdAt)
             FROM ChatMessage m LEFT JOIN User u ON u.id = m.userId
             WHERE m.gatheringId = :gatheringId AND m.id > :afterId
             ORDER BY m.id ASC

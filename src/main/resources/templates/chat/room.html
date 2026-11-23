@@ -16,7 +16,7 @@
 <main class="chat-shell">
   <!--/* 채팅방 머리: 어느 모임인지, 상세로 돌아가기, 연결 상태 */-->
   <div class="chat-head">
-    <a class="chat-back" th:href="@{/gatherings/{id}(id=${g.id})}" aria-label="모임 상세로 돌아가기">←</a>
+    <a class="chat-back" th:href="@{/gatherings/{id}(id=${g.publicId})}" aria-label="모임 상세로 돌아가기">←</a>
     <div class="chat-head-copy">
       <strong th:text="${g.tag.emoji + ' ' + g.title}">모임 이름</strong>
       <span>
@@ -42,8 +42,8 @@
 </main>
 
 <script th:inline="javascript">
-  const GATHERING_ID = /*[[${g.id}]]*/ 1;
-  const ME = /*[[${loginUser != null ? loginUser.id : null}]]*/ 1;
+  const GATHERING_ID = /*[[${g.publicId}]]*/ "00000000-0000-4000-8000-000000000000";
+  const ME = /*[[${me}]]*/ null;   // 내 공개 UUID
 </script>
 <script>
   /* ===== 모임 채팅 =====

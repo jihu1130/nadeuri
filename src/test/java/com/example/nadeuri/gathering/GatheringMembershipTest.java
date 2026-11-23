@@ -147,7 +147,7 @@ class GatheringMembershipTest {
         User b = user("구경꾼");
         Gathering g = gathering(host, "버튼 테스트");
         service.join(g.getId(), a.getId());
-        String url = "/gatherings/" + g.getId();
+        String url = "/gatherings/" + g.getPublicId();
 
         mvc.perform(get(url).with(oauth2Login().oauth2User(login(host))))
                 .andExpect(content().string(containsString(">모임 삭제</button>")))
@@ -208,7 +208,7 @@ class GatheringMembershipTest {
         User host = user("주최");
         User other = user("남");
         Gathering g = gathering(host, "채워질 제목");
-        String url = "/gatherings/" + g.getId() + "/edit";
+        String url = "/gatherings/" + g.getPublicId() + "/edit";
 
         mvc.perform(get(url).with(oauth2Login().oauth2User(login(host))))
                 .andExpect(status().isOk())
@@ -216,7 +216,7 @@ class GatheringMembershipTest {
                 .andExpect(content().string(containsString("action=\"" + url + "\"")))
                 .andExpect(content().string(containsString("수정 저장")));
         mvc.perform(get(url).with(oauth2Login().oauth2User(login(other))))
-                .andExpect(redirectedUrl("/gatherings/" + g.getId()))
+                .andExpect(redirectedUrl("/gatherings/" + g.getPublicId()))
                 .andExpect(flash().attribute("message", "모임을 만든 사람만 할 수 있어요."));
         mvc.perform(get(url)).andExpect(redirectedUrlPattern("**/login"));
     }
@@ -227,7 +227,7 @@ class GatheringMembershipTest {
         User a = user("참여");
         Gathering g = gathering(host, "원래 제목");
         service.join(g.getId(), a.getId());     // 2명
-        String url = "/gatherings/" + g.getId() + "/edit";
+        String url = "/gatherings/" + g.getPublicId() + "/edit";
         String start = Times.now().plusDays(3).withHour(15).withMinute(30).toLocalDate() + "T15:30";
 
         // 정원을 1명으로 줄이려 하면 검증(@Min 2)에서 막히고 입력한 제목은 남아 있다
@@ -242,7 +242,7 @@ class GatheringMembershipTest {
                         .param("title", "바뀐 제목").param("tag", "PICNIC").param("placeName", "바뀐 장소")
                         .param("latitude", "37.5").param("longitude", "127.0")
                         .param("startAt", start).param("durationMinutes", "90").param("maxPeople", "10"))
-                .andExpect(redirectedUrl("/gatherings/" + g.getId()))
+                .andExpect(redirectedUrl("/gatherings/" + g.getPublicId()))
                 .andExpect(flash().attribute("message", "모임 정보를 수정했어요."));
         Gathering after = service.get(g.getId());
         assertThat(after.getTitle()).isEqualTo("바뀐 제목");
@@ -258,15 +258,15 @@ class GatheringMembershipTest {
         Gathering g = gathering(host, "요청 테스트");
         service.join(g.getId(), a.getId());
 
-        mvc.perform(post("/gatherings/" + g.getId() + "/leave").with(oauth2Login().oauth2User(login(a))).with(csrf()))
-                .andExpect(redirectedUrl("/gatherings/" + g.getId()))
+        mvc.perform(post("/gatherings/" + g.getPublicId() + "/leave").with(oauth2Login().oauth2User(login(a))).with(csrf()))
+                .andExpect(redirectedUrl("/gatherings/" + g.getPublicId()))
                 .andExpect(flash().attribute("message", "참여를 취소했어요."));
         // 주최자가 아닌 사람의 삭제 요청은 거절
-        mvc.perform(post("/gatherings/" + g.getId() + "/delete").with(oauth2Login().oauth2User(login(a))).with(csrf()))
-                .andExpect(redirectedUrl("/gatherings/" + g.getId()));
+        mvc.perform(post("/gatherings/" + g.getPublicId() + "/delete").with(oauth2Login().oauth2User(login(a))).with(csrf()))
+                .andExpect(redirectedUrl("/gatherings/" + g.getPublicId()));
         assertThat(gatheringRepository.existsById(g.getId())).isTrue();
 
-        mvc.perform(post("/gatherings/" + g.getId() + "/delete").with(oauth2Login().oauth2User(login(host))).with(csrf()))
+        mvc.perform(post("/gatherings/" + g.getPublicId() + "/delete").with(oauth2Login().oauth2User(login(host))).with(csrf()))
                 .andExpect(redirectedUrl("/me/gatherings"));
         assertThat(gatheringRepository.existsById(g.getId())).isFalse();
     }

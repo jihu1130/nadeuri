@@ -37,7 +37,7 @@ class SecurityConfigTest {
     @Test
     void 로그인_없이_둘러볼_수_있다() throws Exception {
         mvc.perform(get("/")).andExpect(status().isOk());
-        mvc.perform(get("/gatherings/" + gathering().getId()))
+        mvc.perform(get("/gatherings/" + gathering().getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("로그인하고 참여하기")));
         mvc.perform(get("/api/gatherings").param("lat", "37.5").param("lng", "127.0"))
@@ -53,14 +53,14 @@ class SecurityConfigTest {
         mvc.perform(get("/gatherings/new"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("**/login"));
-        mvc.perform(post("/gatherings/" + gathering().getId() + "/join").with(csrf()))
+        mvc.perform(post("/gatherings/" + gathering().getPublicId() + "/join").with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("**/login"));
     }
 
     @Test
     void CSRF_토큰_없는_POST는_막힌다() throws Exception {
-        mvc.perform(post("/gatherings/" + gathering().getId() + "/join")
+        mvc.perform(post("/gatherings/" + gathering().getPublicId() + "/join")
                         .with(oauth2Login().oauth2User(new LoginUser(1L, "테스트", null))))
                 .andExpect(status().isForbidden());
     }
@@ -70,11 +70,11 @@ class SecurityConfigTest {
         Gathering g = gathering();
         LoginUser me = new LoginUser(4242L, "산책왕", null);
 
-        mvc.perform(post("/gatherings/" + g.getId() + "/join").with(oauth2Login().oauth2User(me)).with(csrf()))
-                .andExpect(redirectedUrl("/gatherings/" + g.getId()));
+        mvc.perform(post("/gatherings/" + g.getPublicId() + "/join").with(oauth2Login().oauth2User(me)).with(csrf()))
+                .andExpect(redirectedUrl("/gatherings/" + g.getPublicId()));
 
         assertThat(service.hasJoined(g.getId(), 4242L)).isTrue();
-        mvc.perform(get("/gatherings/" + g.getId()).with(oauth2Login().oauth2User(me)))
+        mvc.perform(get("/gatherings/" + g.getPublicId()).with(oauth2Login().oauth2User(me)))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("산책왕")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("참여 완료")));
     }

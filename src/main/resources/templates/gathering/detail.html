@@ -78,16 +78,16 @@
 
   <div class="detail-actions">
     <!--/* 참여자(주최자 포함): 모임 채팅 */-->
-    <a th:if="${joined}" class="btn chat-entry" th:href="@{/gatherings/{id}/chat(id=${g.id})}">
+    <a th:if="${joined}" class="btn chat-entry" th:href="@{/gatherings/{id}/chat(id=${g.publicId})}">
       <span aria-hidden="true">💬</span> 모임 채팅
     </a>
 
     <!--/* 주최자: 모임 삭제 (참여 기록도 함께 지워짐) */-->
     <th:block th:if="${isHost}">
       <p class="detail-note">내가 만든 모임이에요.</p>
-      <a th:unless="${started}" class="btn secondary" th:href="@{/gatherings/{id}/edit(id=${g.id})}"
+      <a th:unless="${started}" class="btn secondary" th:href="@{/gatherings/{id}/edit(id=${g.publicId})}"
          style="width:100%">모임 정보 수정</a>
-      <form method="post" th:action="@{/gatherings/{id}/delete(id=${g.id})}"
+      <form method="post" th:action="@{/gatherings/{id}/delete(id=${g.publicId})}"
             onsubmit="return confirm('모임을 삭제할까요? 참여자 기록도 함께 지워지고 되돌릴 수 없어요.');">
         <button class="btn danger" type="submit" style="width:100%">모임 삭제</button>
       </form>
@@ -96,7 +96,7 @@
     <!--/* 참여자: 참여 완료 표시 + 참여 취소 (시작 전까지) */-->
     <th:block th:if="${joined and !isHost}">
       <button class="btn" type="button" style="width:100%" disabled>참여 완료</button>
-      <form th:unless="${started}" method="post" th:action="@{/gatherings/{id}/leave(id=${g.id})}"
+      <form th:unless="${started}" method="post" th:action="@{/gatherings/{id}/leave(id=${g.publicId})}"
             onsubmit="return confirm('참여를 취소할까요?');">
         <button class="btn secondary" type="submit" style="width:100%">참여 취소</button>
       </form>
@@ -107,12 +107,12 @@
       <button th:if="${ended}" class="btn" type="button" style="width:100%" disabled>끝난 모임</button>
       <p th:if="${started and !ended and !g.full}" class="detail-note">지금 진행 중인 모임이에요. 늦게라도 합류할 수 있어요.</p>
       <th:block th:unless="${ended}">
-        <form th:if="${loginUser != null or g.full}" method="post" th:action="@{/gatherings/{id}/join(id=${g.id})}">
+        <form th:if="${loginUser != null or g.full}" method="post" th:action="@{/gatherings/{id}/join(id=${g.publicId})}">
           <button class="btn" type="submit" style="width:100%" th:disabled="${g.full}"
                   th:text="${g.full} ? '모집 마감' : '참여하기'">참여하기</button>
         </form>
         <!-- 로그인 전: 로그인 후 이 화면으로 돌아오도록 /sign-in 주소를 거친다 -->
-        <a th:unless="${loginUser != null or g.full}" th:href="@{/gatherings/{id}/sign-in(id=${g.id})}"
+        <a th:unless="${loginUser != null or g.full}" th:href="@{/gatherings/{id}/sign-in(id=${g.publicId})}"
            class="btn" style="display:block; width:100%; text-align:center">로그인하고 참여하기</a>
       </th:block>
     </th:block>

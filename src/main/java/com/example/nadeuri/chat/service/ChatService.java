@@ -4,6 +4,8 @@ import com.example.nadeuri.chat.domain.ChatMessage;
 import com.example.nadeuri.chat.dto.ChatMessageView;
 import com.example.nadeuri.chat.exception.NotParticipantException;
 import com.example.nadeuri.chat.repository.ChatMessageRepository;
+import com.example.nadeuri.gathering.domain.Gathering;
+import com.example.nadeuri.gathering.repository.GatheringRepository;
 import com.example.nadeuri.gathering.repository.ParticipantRepository;
 import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.repository.UserRepository;
@@ -17,6 +19,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * 모임 채팅. 그 모임의 참여 기록(주최자 포함)이 있는 회원만 읽고 쓸 수 있다.
@@ -32,6 +35,17 @@ public class ChatService {
     private final ChatMessageRepository repository;
     private final ParticipantRepository participantRepository;
     private final UserRepository userRepository;
+    private final GatheringRepository gatheringRepository;
+
+    /** 주소의 모임 UUID → DB 순번 id. 없는 모임이면 null */
+    public Long gatheringIdOf(UUID publicId) {
+        return gatheringRepository.findByPublicId(publicId.toString()).map(Gathering::getId).orElse(null);
+    }
+
+    /** 회원의 공개 UUID (채팅 화면에서 "내 메시지"를 가려낼 때) */
+    public String userPublicId(Long userId) {
+        return userRepository.findById(userId).map(User::getPublicId).orElse(null);
+    }
 
     public boolean canChat(Long gatheringId, Long userId) {
         return userId != null && participantRepository.existsByGatheringIdAndUserId(gatheringId, userId);
@@ -84,7 +98,7 @@ public class ChatService {
         }
         ChatMessage m = repository.save(new ChatMessage(gatheringId, userId, text));
         User u = userRepository.findById(userId).orElse(null);
-        return new ChatMessageView(m.getId(), userId,
+        return new ChatMessageView(m.getId(), u == null ? null : u.getPublicId(),
                 u == null ? null : u.getNickname(), u == null ? null : u.getProfileImageUrl(),
                 m.getContent(), m.getCreatedAt());
     }

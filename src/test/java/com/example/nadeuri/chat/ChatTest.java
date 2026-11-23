@@ -152,7 +152,7 @@ class ChatTest {
         User outsider = user("구경꾼");
         Gathering g = gathering(host);
         chat.send(g.getId(), host.getId(), "<script>alert(1)</script>");
-        String url = "/api/gatherings/" + g.getId() + "/messages";
+        String url = "/api/gatherings/" + g.getPublicId() + "/messages";
 
         mvc.perform(get(url)).andExpect(status().isForbidden());
         mvc.perform(get(url).with(oauth2Login().oauth2User(login(outsider)))).andExpect(status().isForbidden());
@@ -167,11 +167,11 @@ class ChatTest {
         User host = user("주최");
         User outsider = user("구경꾼");
         Gathering g = gathering(host);
-        String url = "/gatherings/" + g.getId() + "/chat";
+        String url = "/gatherings/" + g.getPublicId() + "/chat";
 
         mvc.perform(get(url)).andExpect(redirectedUrlPattern("**/login"));
         mvc.perform(get(url).with(oauth2Login().oauth2User(login(outsider))))
-                .andExpect(redirectedUrl("/gatherings/" + g.getId()))
+                .andExpect(redirectedUrl("/gatherings/" + g.getPublicId()))
                 .andExpect(flash().attribute("message", "모임에 참여한 사람만 채팅할 수 있어요."));
         mvc.perform(get(url).with(oauth2Login().oauth2User(login(host))))
                 .andExpect(status().isOk())
@@ -184,13 +184,13 @@ class ChatTest {
         User host = user("주최");
         User outsider = user("구경꾼");
         Gathering g = gathering(host);
-        String chatLink = "/gatherings/" + g.getId() + "/chat";
+        String chatLink = "/gatherings/" + g.getPublicId() + "/chat";
 
-        mvc.perform(get("/gatherings/" + g.getId()).with(oauth2Login().oauth2User(login(host))))
+        mvc.perform(get("/gatherings/" + g.getPublicId()).with(oauth2Login().oauth2User(login(host))))
                 .andExpect(content().string(containsString(chatLink)));
-        mvc.perform(get("/gatherings/" + g.getId()).with(oauth2Login().oauth2User(login(outsider))))
+        mvc.perform(get("/gatherings/" + g.getPublicId()).with(oauth2Login().oauth2User(login(outsider))))
                 .andExpect(content().string(not(containsString(chatLink))));
-        mvc.perform(get("/gatherings/" + g.getId()))
+        mvc.perform(get("/gatherings/" + g.getPublicId()))
                 .andExpect(content().string(not(containsString(chatLink))));
     }
 }
