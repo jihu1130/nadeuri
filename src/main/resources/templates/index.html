@@ -237,6 +237,8 @@
     }
     gatherings.forEach(g => {
       let pos = null;
+      let info = null;
+      const item = document.createElement('a');
       if (map) {
         pos = new kakao.maps.LatLng(g.latitude, g.longitude);
         const pin = document.createElement('button');
@@ -246,20 +248,46 @@
         pin.textContent = g.emoji;
         const pinOverlay = new kakao.maps.CustomOverlay({ position: pos, content: pin, yAnchor: 1, clickable: true, zIndex: 3 });
         pinOverlay.setMap(map);
-        const info = new kakao.maps.CustomOverlay({
+        info = new kakao.maps.CustomOverlay({
           position: pos, yAnchor: 1.45, clickable: true, zIndex: 4,
           content: `<a class="map-info" href="/gatherings/${g.id}"><b>${esc(g.title)}</b>${badge(g)}<span>${esc(g.placeName)}</span><span>${when(g)} · ${g.currentPeople}/${g.maxPeople}명</span><span class="more">모임 자세히 보기 →</span></a>`
         });
-        pin.addEventListener('click', e => { e.stopPropagation(); openInfo?.setMap(null); info.setMap(map); openInfo = info; });
+        pin.addEventListener('click', e => { e.stopPropagation(); openInfo?.setMap(null); info.setMap(map); openInfo = info; selectListItem(item, isMapExpanded()); });
         overlays.push(pinOverlay, info);
       }
-      const item = document.createElement('a');
       item.className = 'meetup-item';
       item.href = `/gatherings/${g.id}`;
       item.innerHTML = `<span class="meetup-emoji">${esc(g.emoji)}</span><span class="meetup-copy"><span class="meetup-tag">${esc(g.tagLabel)}${badge(g)}</span><strong>${esc(g.title)}</strong><span class="meetup-meta">${esc(g.placeName)}</span><span class="meetup-time">${when(g)} <i>·</i> ${g.currentPeople}/${g.maxPeople}명</span></span><span class="meetup-arrow" aria-hidden="true">↗</span>`;
-      if (map) item.addEventListener('mouseenter', () => map.panTo(pos));
+      if (map) {
+        item.addEventListener('mouseenter', () => map.panTo(pos));
+        /* 크게 보기 중에는 목록을 눌러도 상세 페이지로 가지 않고 지도에서 그 모임을 보여 준다
+           (말풍선의 '모임 자세히 보기'로 상세 이동, Ctrl/⌘ 클릭은 그대로 새 탭) */
+        item.addEventListener('click', e => {
+          if (!isMapExpanded() || e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+          e.preventDefault();
+          focusGathering(pos, info, item);
+        });
+      }
       document.getElementById('list').appendChild(item);
     });
+  }
+  function isMapExpanded() {
+    return document.querySelector('.discover-grid').classList.contains('is-expanded');
+  }
+  // 목록에서 고른 모임을 표시하고, 필요하면 목록을 그 위치로 스크롤
+  function selectListItem(item, scroll) {
+    document.querySelectorAll('.meetup-item.is-selected').forEach(el => el.classList.remove('is-selected'));
+    item.classList.add('is-selected');
+    if (scroll) item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  // 지도를 모임 위치로 옮기고(멀리 축소돼 있으면 확대) 말풍선을 연다
+  function focusGathering(pos, info, item) {
+    if (map.getLevel() > FOCUS_LEVEL) map.setLevel(FOCUS_LEVEL);
+    map.panTo(pos);
+    openInfo?.setMap(null);
+    info.setMap(map);
+    openInfo = info;
+    selectListItem(item, false);
   }
   /* ===== 이 지역에서 다시 검색 =====
    * 사용자가 지도를 끌어서 검색한 곳에서 충분히 벗어나면 버튼을 보여 주고,
@@ -370,7 +398,7 @@
     kakao.maps.load(() => {
       map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(DEFAULT.lat, DEFAULT.lng), level: 5 });
       map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
-      kakao.maps.event.addListener(map, 'click', () => { openInfo?.setMap(null); openInfo = null; });
+      kakao.maps.event.addListener(map, 'click', () => { openInfo?.setMap(null); openInfo = null; document.querySelectorAll('.meetup-item.is-selected').forEach(el => el.classList.remove('is-selected')); });
       kakao.maps.event.addListener(map, 'idle', () => { updateLocateButton(); updateResearchButton(); });
       kakao.maps.event.addListener(map, 'dragend', () => { userMovedMap = true; updateResearchButton(); });
       document.getElementById('researchButton').addEventListener('click', researchHere);

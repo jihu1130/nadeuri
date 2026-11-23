@@ -364,3 +364,5 @@ body.map-expanded { overflow: hidden; }
   .map-expand-label { display: none; }
   .map-expand-button { padding: 5px 7px; }
 }
+/* 크게 보기에서 목록/핀으로 고른 모임 */
+.meetup-item.is-selected { padding-right: 5px; padding-left: 5px; background: var(--yellow-soft); box-shadow: inset 3px 0 0 #e1b831; }
