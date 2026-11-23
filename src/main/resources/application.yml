@@ -38,6 +38,8 @@ kma:
   # 공공데이터포털 키를 쓰려면 base-url을 https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst,
   # key-param을 serviceKey로 바꾸고 Decoding 키를 넣는다.
   base-url: https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/getVilageFcst
+  # 초단기실황 (홈 화면 "지금 날씨"의 기온·습도·강수). 같은 키를 쓴다.
+  nowcast-url: https://apihub.kma.go.kr/api/typ02/openApi/VilageFcstInfoService_2.0/getUltraSrtNcst
   key-param: authKey
   service-key: ${KMA_SERVICE_KEY:}
 

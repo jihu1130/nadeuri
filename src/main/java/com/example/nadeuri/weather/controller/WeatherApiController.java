@@ -16,11 +16,14 @@ public class WeatherApiController {
 
     private final WeatherService weatherService;
 
-    /** 잘못된 좌표는 400 Bad Request (Spring 6.1 기본 메서드 검증) */
+    /**
+     * 지금 날씨 (초단기실황 + 단기예보 하늘상태·강수확률).
+     * 잘못된 좌표는 400 Bad Request (Spring 6.1 기본 메서드 검증)
+     */
     @GetMapping("/api/weather")
     public WeatherResponse now(@RequestParam @DecimalMin("-90") @DecimalMax("90") double lat,
                                @RequestParam @DecimalMin("-180") @DecimalMax("180") double lng) {
-        return WeatherResponse.from(weatherService.now(lat, lng));
+        return WeatherResponse.from(weatherService.current(lat, lng));
     }
 
     /** 날짜별 요약 + 시간별 예보 (모임 시간 고르기 화면용) */

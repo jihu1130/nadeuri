@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 /**
  * 기상청 단기예보 한 시각의 값.
  * sky: 하늘상태 (1 맑음, 3 구름많음, 4 흐림)
- * pty: 강수형태 (0 없음, 1 비, 2 비/눈, 3 눈, 4 소나기)
+ * pty: 강수형태 (0 없음, 1 비, 2 비/눈, 3 눈, 4 소나기 / 초단기실황은 5 빗방울, 6 빗방울눈날림, 7 눈날림도 씀)
  */
 public record WeatherInfo(
         LocalDateTime time,
@@ -29,13 +29,44 @@ public record WeatherInfo(
 
     public String description() {
         if (!isAvailable()) return "예보 없음";
-        switch (pty) {
-            case 1: return "비";
-            case 2: return "비/눈";
-            case 3: return "눈";
-            case 4: return "소나기";
-            default: break;
-        }
+        String rain = ptyDescription(pty);
+        return rain != null ? rain : skyDescription(sky);
+    }
+
+    public String emoji() {
+        if (!isAvailable()) return "❔";
+        String rain = ptyEmoji(pty);
+        return rain != null ? rain : skyEmoji(sky);
+    }
+
+    /**
+     * 강수형태 글자. 비·눈이 없으면 null.
+     * 단기예보는 1~4, 초단기실황은 1~3, 5~7을 쓴다.
+     */
+    public static String ptyDescription(int pty) {
+        return switch (pty) {
+            case 1 -> "비";
+            case 2 -> "비/눈";
+            case 3 -> "눈";
+            case 4 -> "소나기";
+            case 5 -> "빗방울";
+            case 6 -> "빗방울·눈날림";
+            case 7 -> "눈날림";
+            default -> null;
+        };
+    }
+
+    public static String ptyEmoji(int pty) {
+        return switch (pty) {
+            case 1, 4 -> "🌧️";
+            case 5 -> "🌦️";
+            case 2, 6, 7 -> "🌨️";
+            case 3 -> "❄️";
+            default -> null;
+        };
+    }
+
+    public static String skyDescription(int sky) {
         return switch (sky) {
             case 1 -> "맑음";
             case 3 -> "구름많음";
@@ -44,14 +75,7 @@ public record WeatherInfo(
         };
     }
 
-    public String emoji() {
-        if (!isAvailable()) return "❔";
-        switch (pty) {
-            case 1, 4: return "🌧️";
-            case 2: return "🌨️";
-            case 3: return "❄️";
-            default: break;
-        }
+    public static String skyEmoji(int sky) {
         return switch (sky) {
             case 1 -> "☀️";
             case 3 -> "⛅";

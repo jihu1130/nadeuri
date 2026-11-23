@@ -366,3 +366,6 @@ body.map-expanded { overflow: hidden; }
 }
 /* 크게 보기에서 목록/핀으로 고른 모임 */
 .meetup-item.is-selected { padding-right: 5px; padding-left: 5px; background: var(--yellow-soft); box-shadow: inset 3px 0 0 #e1b831; }
+
+/* ===== 지금 날씨 칩: "지금"(관측) / "예보" 표시 ===== */
+.weather-label { margin-right: 2px; color: #8c7125; font-size: 11px; font-weight: 750; }
