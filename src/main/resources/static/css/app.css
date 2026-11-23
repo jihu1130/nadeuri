@@ -329,14 +329,23 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 .map-expand-button:hover { border-color: #d4ad39; color: #967319; }
 .map-expand-button:focus-visible { outline: 3px solid rgba(225,184,49,.5); outline-offset: 2px; }
 .map-expand-button .icon-collapse { display: none; }
-.map-panel.is-expanded .map-expand-button .icon-expand { display: none; }
-.map-panel.is-expanded .map-expand-button .icon-collapse { display: inline; }
-.map-panel.is-expanded { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; border: 0; border-radius: 0; }
-.map-panel.is-expanded .map-panel-heading { flex: 0 0 auto; border-bottom: 1px solid var(--line); }
-.map-panel.is-expanded #map { flex: 1 1 auto; height: auto; min-height: 0; }
-.map-panel.is-expanded .map-locate-button { right: 20px; bottom: 24px; }
-.map-panel.is-expanded .map-toast { right: 74px; bottom: 26px; left: 20px; max-width: 420px; }
+.discover-grid.is-expanded .map-expand-button .icon-expand { display: none; }
+.discover-grid.is-expanded .map-expand-button .icon-collapse { display: inline; }
+/* 크게 보기: 지도와 검색 결과 목록을 함께 화면 전체로 펼친다 */
+.discover-grid.is-expanded { position: fixed; inset: 0; z-index: 1000; padding: 14px; background: var(--page);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px); grid-template-rows: minmax(0, 1fr); }
+.discover-grid.is-expanded .map-panel { display: flex; flex-direction: column; }
+.discover-grid.is-expanded .map-panel-heading { flex: 0 0 auto; }
+.discover-grid.is-expanded #map { flex: 1 1 auto; height: auto; min-height: 0; }
+.discover-grid.is-expanded .meetup-panel { min-height: 0; }
+.discover-grid.is-expanded .meetup-list { max-height: none; min-height: 0; }
+.discover-grid.is-expanded .map-locate-button { right: 16px; bottom: 20px; }
+.discover-grid.is-expanded .map-toast { right: 70px; bottom: 22px; left: 16px; max-width: 420px; }
 body.map-expanded { overflow: hidden; }
+@media (max-width: 900px) {
+  /* 좁은 화면: 지도 위, 목록 아래 */
+  .discover-grid.is-expanded { gap: 10px; padding: 10px; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr); }
+}
 @media (max-width: 560px) {
   .map-expand-label { display: none; }
   .map-expand-button { padding: 5px 7px; }

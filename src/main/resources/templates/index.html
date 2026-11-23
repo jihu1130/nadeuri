@@ -331,22 +331,10 @@
 
   document.getElementById('radiusSelect').addEventListener('change', e => { radius = Number(e.target.value); loadAt(searchPoint.lat, searchPoint.lng, searchIsCurrent); });
   document.getElementById('mapLocateButton').addEventListener('click', focusMyLocation);
-  if (window.kakao?.maps) {
-    kakao.maps.load(() => {
-      map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(DEFAULT.lat, DEFAULT.lng), level: 5 });
-      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
-      kakao.maps.event.addListener(map, 'click', () => { openInfo?.setMap(null); openInfo = null; });
-      kakao.maps.event.addListener(map, 'idle', () => { updateLocateButton(); updateResearchButton(); });
-      kakao.maps.event.addListener(map, 'dragend', () => { userMovedMap = true; updateResearchButton(); });
-      document.getElementById('researchButton').addEventListener('click', researchHere);
-      locate();
-    });
-  } else {
-    searchPoint = DEFAULT;
 
-  /* 지도 크게 보기: 지도 패널을 화면 전체로 펼치고, 지도 크기를 다시 계산한 뒤 보던 위치를 유지한다 */
+  /* 지도 크게 보기: 지도와 검색 결과 목록을 화면 전체로 펼치고, 지도 크기를 다시 계산한 뒤 보던 위치를 유지한다 */
   function setMapExpanded(expanded) {
-    const panel = document.querySelector('.map-panel');
+    const panel = document.querySelector('.discover-grid');
     const button = document.getElementById('mapExpandButton');
     if (panel.classList.contains('is-expanded') === expanded) return;
     const center = map?.getCenter();
@@ -364,8 +352,20 @@
     }
   }
   document.getElementById('mapExpandButton').addEventListener('click', () =>
-    setMapExpanded(!document.querySelector('.map-panel').classList.contains('is-expanded')));
+    setMapExpanded(!document.querySelector('.discover-grid').classList.contains('is-expanded')));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') setMapExpanded(false); });
+  if (window.kakao?.maps) {
+    kakao.maps.load(() => {
+      map = new kakao.maps.Map(document.getElementById('map'), { center: new kakao.maps.LatLng(DEFAULT.lat, DEFAULT.lng), level: 5 });
+      map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      kakao.maps.event.addListener(map, 'click', () => { openInfo?.setMap(null); openInfo = null; });
+      kakao.maps.event.addListener(map, 'idle', () => { updateLocateButton(); updateResearchButton(); });
+      kakao.maps.event.addListener(map, 'dragend', () => { userMovedMap = true; updateResearchButton(); });
+      document.getElementById('researchButton').addEventListener('click', researchHere);
+      locate();
+    });
+  } else {
+    searchPoint = DEFAULT;
     showMapFallback();
     document.getElementById('mapLocateButton').hidden = true;
     locate();
