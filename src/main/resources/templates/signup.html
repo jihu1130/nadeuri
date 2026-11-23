@@ -35,9 +35,9 @@
       <input id="passwordConfirm" name="passwordConfirm" type="password" required autocomplete="new-password">
       <p class="errors" th:if="${#fields.hasErrors('passwordConfirm')}" th:errors="*{passwordConfirm}"></p>
 
-      <button type="submit" class="btn" style="width:100%; margin-top:16px">가입하기</button>
+      <button type="submit" class="btn btn-block form-submit">가입하기</button>
     </form>
-    <p class="meta" style="text-align:center; margin-top:12px">
+    <p class="meta form-foot">
       이미 계정이 있으신가요? <a th:href="@{/login}" class="link-btn">로그인</a>
     </p>
   </div>

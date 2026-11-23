@@ -378,3 +378,10 @@ body.map-expanded { overflow: hidden; }
 .mine-account { margin: 26px 0 8px; text-align: center; }
 .mine-account a { color: #9a9486; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
 .mine-account a:hover { color: var(--error); }
+
+/* ===== 공용 보조 클래스 (HTML의 style="…"을 옮긴 것) ===== */
+.btn-block { display: flex; width: 100%; text-align: center; }
+.form-submit { margin-top: 16px; }
+.form-foot { margin-top: 12px; text-align: center; }
+.weather-now { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.directions-link { margin-top: 10px; }

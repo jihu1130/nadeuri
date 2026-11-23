@@ -15,7 +15,7 @@
 - Validation: Bean Validation on DTOs and `@RequestParam`; don't silently clamp invalid input from APIs.
 - Concurrency-sensitive counters: single conditional UPDATE or DB constraint, not read-modify-write in Java.
 - Comments and user-facing strings in Korean.
-- Front-end: vanilla JS inside templates; escape user text with `esc()` before `innerHTML`; Kakao SDK via `th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"` + `kakao.maps.load`.
+- Front-end: vanilla JS in `static/js/<page>.js` (never inline `<script>`, `style="…"` or `on*=` in templates — `FrontendSeparationTest` enforces it); pass server values via `data-*` attributes; styles in `static/css`; confirm dialogs via `data-confirm` + `/js/confirm.js`; escape user text with `esc()` before `innerHTML`; Kakao SDK via `th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"` + `kakao.maps.load`.
 
 ## Secrets
 - Never commit or echo secrets. Secrets go in `application-local.yml` (gitignored) or env vars. Keep `application-local.yml.example` and `.env.example` in sync when adding keys.

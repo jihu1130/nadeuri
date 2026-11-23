@@ -56,7 +56,7 @@
 
   <div class="card weather-card">
     <div class="card-heading"><div><p class="eyebrow">기상청 예보</p><h2>모임 시간대 날씨</h2></div></div>
-    <div th:if="${weather.available}" style="display:flex; align-items:center; gap:12px; margin-top:8px">
+    <div th:if="${weather.available}" class="weather-now">
       <span class="weather-big" th:text="${weather.emoji()}"></span>
       <div>
         <div th:text="${weather.description() + ' · ' + #numbers.formatDecimal(weather.temperature(), 1, 0) + '°'}"></div>
@@ -71,9 +71,8 @@
 
   <div class="card map-card">
     <div class="card-heading"><div><p class="eyebrow">모임 장소</p><h2 th:text="${g.placeName}">장소 이름</h2></div></div>
-    <div id="detailMap"></div>
-    <a id="directions" class="btn secondary" target="_blank" rel="noopener"
-       style="width:100%; text-align:center; margin-top:10px">카카오맵에서 길찾기</a>
+    <div id="detailMap" th:attr="data-lat=${g.latitude},data-lng=${g.longitude},data-place=${g.placeName}"></div>
+    <a id="directions" class="btn secondary btn-block directions-link" target="_blank" rel="noopener">카카오맵에서 길찾기</a>
   </div>
 
   <div class="detail-actions">
@@ -85,53 +84,41 @@
     <!--/* 주최자: 모임 삭제 (참여 기록도 함께 지워짐) */-->
     <th:block th:if="${isHost}">
       <p class="detail-note">내가 만든 모임이에요.</p>
-      <a th:unless="${started}" class="btn secondary" th:href="@{/gatherings/{id}/edit(id=${g.publicId})}"
-         style="width:100%">모임 정보 수정</a>
+      <a th:unless="${started}" class="btn secondary btn-block" th:href="@{/gatherings/{id}/edit(id=${g.publicId})}">모임 정보 수정</a>
       <form method="post" th:action="@{/gatherings/{id}/delete(id=${g.publicId})}"
-            onsubmit="return confirm('모임을 삭제할까요? 참여자 기록도 함께 지워지고 되돌릴 수 없어요.');">
-        <button class="btn danger" type="submit" style="width:100%">모임 삭제</button>
+            data-confirm="모임을 삭제할까요? 참여자 기록도 함께 지워지고 되돌릴 수 없어요.">
+        <button class="btn danger btn-block" type="submit">모임 삭제</button>
       </form>
     </th:block>
 
     <!--/* 참여자: 참여 완료 표시 + 참여 취소 (시작 전까지) */-->
     <th:block th:if="${joined and !isHost}">
-      <button class="btn" type="button" style="width:100%" disabled>참여 완료</button>
+      <button class="btn btn-block" type="button" disabled>참여 완료</button>
       <form th:unless="${started}" method="post" th:action="@{/gatherings/{id}/leave(id=${g.publicId})}"
-            onsubmit="return confirm('참여를 취소할까요?');">
-        <button class="btn secondary" type="submit" style="width:100%">참여 취소</button>
+            data-confirm="참여를 취소할까요?">
+        <button class="btn secondary btn-block" type="submit">참여 취소</button>
       </form>
     </th:block>
 
     <!--/* 아직 참여 안 함: 끝나기 전까지 참여 가능 (진행 중이면 늦게 합류) */-->
     <th:block th:unless="${joined}">
-      <button th:if="${ended}" class="btn" type="button" style="width:100%" disabled>끝난 모임</button>
+      <button th:if="${ended}" class="btn btn-block" type="button" disabled>끝난 모임</button>
       <p th:if="${started and !ended and !g.full}" class="detail-note">지금 진행 중인 모임이에요. 늦게라도 합류할 수 있어요.</p>
       <th:block th:unless="${ended}">
         <form th:if="${loginUser != null or g.full}" method="post" th:action="@{/gatherings/{id}/join(id=${g.publicId})}">
-          <button class="btn" type="submit" style="width:100%" th:disabled="${g.full}"
+          <button class="btn btn-block" type="submit" th:disabled="${g.full}"
                   th:text="${g.full} ? '모집 마감' : '참여하기'">참여하기</button>
         </form>
-        <!-- 로그인 전: 로그인 후 이 화면으로 돌아오도록 /sign-in 주소를 거친다 -->
+        <!--/* 로그인 전: 로그인 후 이 화면으로 돌아오도록 /sign-in 주소를 거친다 */-->
         <a th:unless="${loginUser != null or g.full}" th:href="@{/gatherings/{id}/sign-in(id=${g.publicId})}"
-           class="btn" style="display:block; width:100%; text-align:center">로그인하고 참여하기</a>
+           class="btn btn-block">로그인하고 참여하기</a>
       </th:block>
     </th:block>
   </div>
 </div>
 
 <script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"></script>
-<script th:inline="javascript">
-  const lat = /*[[${g.latitude}]]*/ 37.5283, lng = /*[[${g.longitude}]]*/ 126.9294;
-  const placeName = /*[[${g.placeName}]]*/ '장소';
-  kakao.maps.load(() => {
-    const pos = new kakao.maps.LatLng(lat, lng);
-    const map = new kakao.maps.Map(document.getElementById('detailMap'), { center: pos, level: 3 });
-    map.setZoomable(false); // 페이지 스크롤 중 지도가 확대되지 않게
-    new kakao.maps.Marker({ position: pos }).setMap(map);
-  });
-  // 카카오맵 앱/웹에서 길찾기
-  document.getElementById('directions').href =
-    `https://map.kakao.com/link/to/${encodeURIComponent(placeName)},${lat},${lng}`;
-</script>
+<script th:src="@{/js/gathering-detail.js}"></script>
+<script th:src="@{/js/confirm.js}"></script>
 </body>
 </html>

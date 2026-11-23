@@ -31,9 +31,9 @@
              autocapitalize="none" spellcheck="false" maxlength="20" th:value="${username}" placeholder="아이디 입력">
       <label for="password">비밀번호</label>
       <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="비밀번호 입력">
-      <button type="submit" class="btn" style="width:100%; margin-top:16px">로그인</button>
+      <button type="submit" class="btn btn-block form-submit">로그인</button>
     </form>
-    <p class="meta" style="text-align:center; margin-top:12px">
+    <p class="meta form-foot">
       계정이 없으신가요? <a th:href="@{/signup}" class="link-btn">회원가입</a>
     </p>
 

@@ -233,5 +233,8 @@ nadeuri
 - [x] 주소의 번호를 UUID로 바꾸기 (예: `/gatherings/19b80fb1-…/chat`)
 - [x] 회원마다 UUID 만들기
 
+**코드 정리**
+- [x] 프론트엔드 코드를 HTML·CSS·JS 파일로 분리 (화면 안의 `<script>`·`style="…"`·`onsubmit` 없음, 테스트로 지킴)
+
 ## 작업 기록
 날짜별 작업 내용은 [`doc/user`](doc/user) 폴더에 `YYMMDD.md` 형식으로 남깁니다.

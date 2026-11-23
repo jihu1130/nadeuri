@@ -175,7 +175,8 @@ class ChatTest {
                 .andExpect(flash().attribute("message", "모임에 참여한 사람만 채팅할 수 있어요."));
         mvc.perform(get(url).with(oauth2Login().oauth2User(login(host))))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("/ws/gatherings/")))
+                .andExpect(content().string(containsString("data-gathering-id=\"" + g.getPublicId() + "\"")))
+                .andExpect(content().string(containsString("/js/chat-room.js")))
                 .andExpect(content().string(containsString("참여자 1명")));
     }
 

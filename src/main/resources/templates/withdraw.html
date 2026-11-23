@@ -22,7 +22,7 @@
     <div class="errors" th:if="${error}" th:text="${error}"></div>
 
     <form method="post" th:action="@{/me/withdraw}"
-          onsubmit="return confirm('정말 탈퇴할까요? 되돌릴 수 없어요.');">
+          data-confirm="정말 탈퇴할까요? 되돌릴 수 없어요.">
       <th:block th:if="${local}">
         <label for="password">비밀번호 확인</label>
         <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="지금 비밀번호 입력">
@@ -31,10 +31,11 @@
         <input type="checkbox" name="confirm" value="true" required>
         <span>위 내용을 확인했고, 탈퇴에 동의해요.</span>
       </label>
-      <button type="submit" class="btn danger" style="width:100%; margin-top:16px">탈퇴하기</button>
+      <button type="submit" class="btn danger btn-block form-submit">탈퇴하기</button>
     </form>
     <a th:href="@{/me/gatherings}" class="browse-link">취소하고 돌아가기</a>
   </div>
 </main>
+<script th:src="@{/js/confirm.js}"></script>
 </body>
 </html>
