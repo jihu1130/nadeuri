@@ -43,6 +43,9 @@ class SecurityConfigTest {
         mvc.perform(get("/api/gatherings").param("lat", "37.5").param("lng", "127.0"))
                 .andExpect(status().isOk());
         mvc.perform(get("/login")).andExpect(status().isOk());
+        // 화면에서 쓰는 CSS·JS 파일은 로그인 없이 받아야 한다 (막히면 로그인 화면 HTML이 대신 내려옴)
+        mvc.perform(get("/css/select-menu.css")).andExpect(status().isOk());
+        mvc.perform(get("/js/select-menu.js")).andExpect(status().isOk());
     }
 
     @Test

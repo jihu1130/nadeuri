@@ -8,6 +8,7 @@
   <title>나들이 | 주변 모임 찾기</title>
   <link rel="preconnect" href="https://dapi.kakao.com">
   <link rel="stylesheet" th:href="@{/css/app.css}">
+  <link rel="stylesheet" th:href="@{/css/select-menu.css}">
 </head>
 <body class="home-page">
 <header class="topbar home-topbar">
@@ -37,7 +38,7 @@
       </div>
       <div class="discover-controls">
         <label class="radius-control" for="radiusSelect"><span aria-hidden="true">⌖</span>
-          <select id="radiusSelect" aria-label="검색 반경">
+          <select id="radiusSelect" aria-label="검색 반경" data-menu="compact">
             <option value="3000">반경 3km</option>
             <option value="5000" selected>반경 5km</option>
             <option value="10000">반경 10km</option>
@@ -90,6 +91,7 @@
   <footer class="home-footer"><span>검색 결과에는 선택한 반경 안에서 시작 예정인 모임만 표시됩니다.</span><span>반경 3–20km</span></footer>
 </main>
 
+<script th:src="@{/js/select-menu.js}"></script>
 <script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"></script>
 <script>
   const DEFAULT = { lat: 37.5283, lng: 126.9294 };

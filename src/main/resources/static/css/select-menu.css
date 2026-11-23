@@ -1,0 +1,51 @@
+/* 꾸민 드롭다운 (static/js/select-menu.js 가 <select data-menu> 를 바꿔서 씀) */
+.select-menu { position: relative; width: 100%; }
+.select-menu.is-open { z-index: 100; }
+.select-menu-native { position: absolute; bottom: 0; left: 0; width: 100%; height: 1px; min-height: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+
+.select-menu-trigger { display: flex; width: 100%; min-height: 46px; align-items: center; gap: 10px; padding: 8px 12px 8px 13px; border: 1px solid #dedbd2; border-radius: 9px;
+  background: #fff; color: var(--ink); font-size: 14px; text-align: left; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+.select-menu-trigger:hover { border-color: #d8c48a; background: #fffefa; }
+.select-menu-trigger:focus-visible, .select-menu.is-open .select-menu-trigger { border-color: #d8b443; outline: 3px solid rgba(242,201,76,.18); outline-offset: 0; }
+.select-menu.is-invalid .select-menu-trigger { border-color: var(--error); }
+.select-menu-value { display: flex; min-width: 0; flex: 1; align-items: center; gap: 9px; }
+.select-menu-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select-menu-emoji { display: inline-grid; width: 28px; height: 28px; flex: 0 0 28px; place-items: center; border-radius: 9px; background: var(--yellow-soft); font-size: 16px; line-height: 1; }
+.select-menu-chevron { display: inline-flex; flex: 0 0 auto; color: #a08a4c; transition: transform .18s ease; }
+.select-menu.is-open .select-menu-chevron { transform: rotate(180deg); }
+
+.select-menu-list { position: absolute; top: calc(100% + 6px); right: 0; left: 0; z-index: 60; max-height: 360px; margin: 0; padding: 6px; overflow-y: auto; list-style: none; scrollbar-width: thin; scrollbar-color: #e6dcc0 transparent; overscroll-behavior: contain;
+  border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 16px 36px rgba(66,55,22,.14), 0 2px 6px rgba(66,55,22,.06); outline: 0;
+  animation: select-menu-in .14s ease-out; }
+.select-menu.is-up .select-menu-list { top: auto; bottom: calc(100% + 6px); animation-name: select-menu-in-up; }
+.select-menu-list[hidden] { display: none; }
+.select-menu-option { display: flex; min-height: 40px; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px; color: #3d3a31; font-size: 14px; cursor: pointer; user-select: none; }
+.select-menu-option + .select-menu-option { margin-top: 2px; }
+.select-menu-option.is-active { background: var(--yellow-wash); }
+.select-menu-option[aria-selected="true"] { background: var(--yellow-soft); color: #463912; font-weight: 700; }
+.select-menu-option[aria-disabled="true"] { color: #b8b3a6; cursor: not-allowed; }
+.select-menu-option .select-menu-text { flex: 1; }
+.select-menu-option .select-menu-emoji { width: 26px; height: 26px; flex-basis: 26px; background: #fbf6e6; font-size: 15px; }
+.select-menu-option[aria-selected="true"] .select-menu-emoji { background: #fff; }
+.select-menu-check { display: inline-flex; color: #b98d12; visibility: hidden; }
+.select-menu-option[aria-selected="true"] .select-menu-check { visibility: visible; }
+@keyframes select-menu-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes select-menu-in-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* 작은 버전: 홈의 반경 선택처럼 테두리 있는 칸 안에 들어갈 때 */
+.select-menu.is-compact { width: auto; }
+.select-menu.is-compact .select-menu-trigger { min-height: 38px; gap: 6px; padding: 0 2px; border: 0; background: transparent; color: #514b3c; font-size: 12px; font-weight: 700; }
+.select-menu.is-compact .select-menu-trigger:focus-visible { outline: 3px solid rgba(226,177,36,.45); outline-offset: 2px; border-radius: 6px; }
+.select-menu.is-compact.is-open .select-menu-trigger { outline: 0; }
+.select-menu.is-compact .select-menu-chevron svg { width: 14px; height: 14px; }
+.select-menu.is-compact .select-menu-list { right: -13px; left: auto; min-width: 150px; top: calc(100% + 8px); }
+.select-menu.is-compact .select-menu-option { min-height: 36px; font-size: 13px; }
+
+@media (max-width: 560px) {
+  .select-menu.is-compact { flex: 1; }
+  .select-menu.is-compact .select-menu-trigger { justify-content: space-between; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .select-menu-list { animation: none; }
+  .select-menu-chevron { transition: none; }
+}
