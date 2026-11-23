@@ -56,6 +56,12 @@
             <span><i class="legend-you" aria-hidden="true"></i> 내 위치</span>
           </div>
           <span class="map-hint">핀을 누르면 모임 정보가 표시됩니다</span>
+          <!--/* 지도를 화면 전체로 키우는 버튼 (같은 지도를 그대로 확대 표시, Esc로 닫기) */-->
+          <button type="button" class="map-expand-button" id="mapExpandButton" aria-pressed="false" aria-label="지도 크게 보기" title="지도 크게 보기">
+            <svg class="icon-expand" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            <svg class="icon-collapse" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>
+            <span class="map-expand-label">크게 보기</span>
+          </button>
         </div>
         <div id="map" aria-label="주변 모임이 표시된 지도"></div>
         <div id="mapFallback" class="map-fallback" hidden>카카오 지도를 불러오지 못했습니다. 오른쪽 목록에서 모임을 확인하세요.</div>
@@ -337,6 +343,29 @@
     });
   } else {
     searchPoint = DEFAULT;
+
+  /* 지도 크게 보기: 지도 패널을 화면 전체로 펼치고, 지도 크기를 다시 계산한 뒤 보던 위치를 유지한다 */
+  function setMapExpanded(expanded) {
+    const panel = document.querySelector('.map-panel');
+    const button = document.getElementById('mapExpandButton');
+    if (panel.classList.contains('is-expanded') === expanded) return;
+    const center = map?.getCenter();
+    panel.classList.toggle('is-expanded', expanded);
+    document.body.classList.toggle('map-expanded', expanded);
+    button.setAttribute('aria-pressed', String(expanded));
+    button.setAttribute('aria-label', expanded ? '지도 작게 보기' : '지도 크게 보기');
+    button.title = expanded ? '지도 작게 보기 (Esc)' : '지도 크게 보기';
+    button.querySelector('.map-expand-label').textContent = expanded ? '작게 보기' : '크게 보기';
+    if (map) {
+      map.relayout();
+      map.setCenter(center);
+      updateLocateButton();
+      updateResearchButton();
+    }
+  }
+  document.getElementById('mapExpandButton').addEventListener('click', () =>
+    setMapExpanded(!document.querySelector('.map-panel').classList.contains('is-expanded')));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setMapExpanded(false); });
     showMapFallback();
     document.getElementById('mapLocateButton').hidden = true;
     locate();

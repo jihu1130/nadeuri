@@ -322,3 +322,22 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 .error-card h1 { margin: 0 0 8px; font-size: 20px; }
 .error-text { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .error-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+/* 홈 지도: "크게 보기" 버튼과 화면 전체로 펼친 지도 */
+.map-expand-button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; min-height: 30px; padding: 5px 10px; border: 1px solid #e3ddca; border-radius: 8px;
+  background: #fff; color: #5c5542; font: inherit; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.map-expand-button:hover { border-color: #d4ad39; color: #967319; }
+.map-expand-button:focus-visible { outline: 3px solid rgba(225,184,49,.5); outline-offset: 2px; }
+.map-expand-button .icon-collapse { display: none; }
+.map-panel.is-expanded .map-expand-button .icon-expand { display: none; }
+.map-panel.is-expanded .map-expand-button .icon-collapse { display: inline; }
+.map-panel.is-expanded { position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; border: 0; border-radius: 0; }
+.map-panel.is-expanded .map-panel-heading { flex: 0 0 auto; border-bottom: 1px solid var(--line); }
+.map-panel.is-expanded #map { flex: 1 1 auto; height: auto; min-height: 0; }
+.map-panel.is-expanded .map-locate-button { right: 20px; bottom: 24px; }
+.map-panel.is-expanded .map-toast { right: 74px; bottom: 26px; left: 20px; max-width: 420px; }
+body.map-expanded { overflow: hidden; }
+@media (max-width: 560px) {
+  .map-expand-label { display: none; }
+  .map-expand-button { padding: 5px 7px; }
+}
