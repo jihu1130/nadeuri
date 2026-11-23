@@ -13,6 +13,7 @@
 | 모임 상세 | 모임 시각의 날씨 예보를 보여 주고, 야외 활동에 비 예보가 있으면 ☔ 경고를 띄웁니다. 카카오맵 길찾기도 연결됩니다 |
 | 로그인 | 아이디 + 비밀번호로 가입·로그인하거나 카카오로 로그인합니다. 둘러보기는 누구나 가능하고, 모임 만들기와 참여는 로그인이 필요합니다 |
 | 참여하기 | 정원 초과와 중복 참여를 막습니다. 회원 ID로 참여 기록을 남깁니다 |
+| 모임 채팅 | 모임에 참여한 사람(주최자 포함)끼리 실시간으로 대화합니다. 지난 메시지를 불러오고, 연결이 끊기면 자동으로 다시 연결해 놓친 메시지를 채웁니다 |
 
 ## 기술 스택
 
@@ -68,6 +69,7 @@ kakao:
 - 테이블 구조는 `src/main/resources/db/migration/` 안의 SQL 파일로 관리합니다. 앱이 뜰 때 Flyway가 아직 적용하지 않은 파일을 순서대로 실행합니다.
 - `V1__init.sql`: 처음 테이블(gathering, participant, users)
 - `V2__add_gathering_end_at.sql`: 모임 끝나는 시간 `end_at` 추가 (기존 모임은 시작 + 2시간으로 채움)
+- `V3__create_chat_message.sql`: 모임 채팅 메시지 테이블 `chat_message`
 - **테이블을 바꿀 때는 기존 파일을 고치지 말고** `V2__설명.sql`처럼 새 파일을 추가하세요. 예: `V2__add_gathering_cover_image.sql`
 - Hibernate는 테이블을 직접 바꾸지 않고 코드와 맞는지 **확인만**(`ddl-auto: validate`) 합니다. 맞지 않으면 앱이 뜨지 않으니, 엔티티를 바꾸면 SQL 파일도 같이 추가하세요.
 - Flyway 도입 전부터 쓰던 DB는 V1을 실행하지 않고 "이미 V1"로 기록만 합니다(`baseline-on-migrate`). 데이터는 그대로입니다.
@@ -173,6 +175,9 @@ nadeuri
 | GET | `/gatherings/{id}/edit` | 모임 수정 화면 (주최자만, 시작 전) 🔒 |
 | POST | `/gatherings/{id}/edit` | 모임 수정 저장 🔒 |
 | GET | `/me/gatherings` | 내 모임 (만든 모임 / 참여한 모임) 🔒 |
+| GET | `/gatherings/{id}/chat` | 모임 채팅 화면 (참여자만) 🔒 |
+| GET | `/api/gatherings/{id}/messages` | 지난 채팅 메시지 JSON (최근 50개, `?before=id` 더 이전, `?after=id` 그 뒤). 참여자가 아니면 403 |
+| WS | `/ws/gatherings/{id}/chat` | 채팅 WebSocket. 보내기 `{"content":"..."}`, 받기 `{"type":"message","message":{...}}` / `{"type":"error","message":"..."}` 🔒 |
 | GET | `/api/weather/forecast?lat=&lng=` | 날짜별·시간별 예보 JSON (모임 시간 고르기용) |
 | GET | `/api/gatherings?lat=&lng=&radius=` | 끝나지 않은 주변 모임 JSON (반경 100~20,000m, 좌표가 범위를 벗어나면 400). `endAt`, `status`(RECRUITING·FULL·ONGOING·ENDED), `statusLabel` 포함 |
 | GET | `/api/weather?lat=&lng=` | 지금 날씨 JSON (기온·습도·1시간 강수량은 초단기실황 관측값, 하늘상태·강수확률은 예보. `observed`, `observedAt` 포함) |
@@ -192,7 +197,8 @@ nadeuri
 - [x] 모임 상세에 주최자·참여자 목록, 내 모임 화면, 참여 취소, 모임 삭제
 - [x] 모임 수정 (주최자)
 - [x] 지도 이동 후 "이 지역에서 다시 검색"
-- [ ] WebSocket(STOMP) 모임 채팅
+- [x] 모임 채팅 (WebSocket)
+- [ ] 채팅 안 읽은 메시지 표시, 알림
 - [ ] 데이터가 늘어나면 MySQL 공간 인덱스(`ST_Distance_Sphere`)로 검색 전환
 - [x] DB 마이그레이션 도구 도입 (Flyway)
 - [x] 한국어 오류 화면 (404·400·403·500)

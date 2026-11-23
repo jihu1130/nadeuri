@@ -1,5 +1,6 @@
 package com.example.nadeuri.gathering.service;
 
+import com.example.nadeuri.chat.repository.ChatMessageRepository;
 import com.example.nadeuri.gathering.domain.Gathering;
 import com.example.nadeuri.gathering.domain.Participant;
 import com.example.nadeuri.gathering.dto.GatheringCreateRequest;
@@ -30,6 +31,7 @@ public class GatheringService {
 
     private final GatheringRepository repository;
     private final ParticipantRepository participantRepository;
+    private final ChatMessageRepository chatMessageRepository;
 
     public List<Gathering> findNearby(double lat, double lng, double radiusMeters) {
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -144,7 +146,7 @@ public class GatheringService {
     }
 
     /**
-     * 모임 삭제 (주최자만). 참여 기록도 함께 지운다.
+     * 모임 삭제 (주최자만). 참여 기록과 채팅 메시지도 함께 지운다.
      * @throws NotHostException 주최자가 아님
      */
     @Transactional
@@ -153,6 +155,7 @@ public class GatheringService {
         if (!isHost(id, userId)) {
             throw new NotHostException();
         }
+        chatMessageRepository.deleteAllByGatheringId(id);
         participantRepository.deleteAllByGatheringId(id);
         repository.delete(g);
     }

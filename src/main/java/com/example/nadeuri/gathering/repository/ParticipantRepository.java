@@ -14,6 +14,10 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
 
     boolean existsByGatheringIdAndUserId(Long gatheringId, Long userId);
 
+    /** 이 모임에 참여 기록이 있는 회원 id들 (주최자 포함) */
+    @Query("SELECT p.userId FROM Participant p WHERE p.gatheringId = :gatheringId")
+    List<Long> findUserIdsByGatheringId(@Param("gatheringId") Long gatheringId);
+
     Optional<Participant> findByGatheringIdAndUserId(Long gatheringId, Long userId);
 
     /**
