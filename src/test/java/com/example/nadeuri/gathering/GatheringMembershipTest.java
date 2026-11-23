@@ -56,7 +56,7 @@ class GatheringMembershipTest {
 
     private Gathering gathering(User host, String title) {
         return service.create(new GatheringCreateRequest(title, null, ActivityTag.WALK, "장소",
-                37.5, 127.0, Times.now().plusDays(1), 5), host.getId());
+                37.5, 127.0, Times.now().plusDays(1), 120, 5), host.getId());
     }
 
     @Test
@@ -165,7 +165,7 @@ class GatheringMembershipTest {
 
     private static GatheringCreateRequest edited(String title, int maxPeople) {
         return new GatheringCreateRequest(title, "설명 바꿈", ActivityTag.RUNNING, "새 장소",
-                37.55, 126.9, Times.now().plusDays(2).withSecond(0).withNano(0), maxPeople);
+                37.55, 126.9, Times.now().plusDays(2).withSecond(0).withNano(0), 120, maxPeople);
     }
 
     @Test
@@ -234,20 +234,21 @@ class GatheringMembershipTest {
         mvc.perform(post(url).with(oauth2Login().oauth2User(login(host))).with(csrf())
                         .param("title", "입력한 제목").param("tag", "WALK").param("placeName", "장소")
                         .param("latitude", "37.5").param("longitude", "127.0")
-                        .param("startAt", start).param("maxPeople", "1"))
+                        .param("startAt", start).param("durationMinutes", "90").param("maxPeople", "1"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("value=\"입력한 제목\"")));
 
         mvc.perform(post(url).with(oauth2Login().oauth2User(login(host))).with(csrf())
                         .param("title", "바뀐 제목").param("tag", "PICNIC").param("placeName", "바뀐 장소")
                         .param("latitude", "37.5").param("longitude", "127.0")
-                        .param("startAt", start).param("maxPeople", "10"))
+                        .param("startAt", start).param("durationMinutes", "90").param("maxPeople", "10"))
                 .andExpect(redirectedUrl("/gatherings/" + g.getId()))
                 .andExpect(flash().attribute("message", "모임 정보를 수정했어요."));
         Gathering after = service.get(g.getId());
         assertThat(after.getTitle()).isEqualTo("바뀐 제목");
         assertThat(after.getStartAt().getHour()).isEqualTo(15);
         assertThat(after.getStartAt().getMinute()).isEqualTo(30);
+        assertThat(after.getEndAt()).isEqualTo(after.getStartAt().plusMinutes(90)); // 진행 시간도 함께 바뀜
     }
 
     @Test

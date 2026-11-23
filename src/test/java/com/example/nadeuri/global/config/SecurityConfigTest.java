@@ -31,7 +31,7 @@ class SecurityConfigTest {
 
     private Gathering gathering() {
         return service.create(new GatheringCreateRequest("테스트", null, ActivityTag.WALK, "장소",
-                37.5, 127.0, Times.now().plusDays(1), 5), 999L);
+                37.5, 127.0, Times.now().plusDays(1), 120, 5), 999L);
     }
 
     @Test

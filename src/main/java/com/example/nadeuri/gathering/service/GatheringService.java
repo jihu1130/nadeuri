@@ -89,15 +89,16 @@ public class GatheringService {
      *    그 예외로 트랜잭션 전체(1의 증가 포함)가 롤백된다
      * 마감 요청이 참여 기록을 넣었다 롤백하지 않도록 이 순서로 한다
      * (H2는 동시에 롤백된 자동 번호를 다시 내줘서 PK 충돌이 나기도 함).
+     * 진행 중인 모임에도 늦게 합류할 수 있다 (끝난 모임만 막음).
      *
      * @throws AlreadyJoinedException 이미 참여한 모임
-     * @throws IllegalStateException  모집 마감 또는 이미 시작된 모임
+     * @throws IllegalStateException  모집 마감 또는 이미 끝난 모임
      */
     @Transactional
     public void join(Long id, Long userId) {
         Gathering g = get(id);
-        if (!g.getStartAt().isAfter(Times.now())) {
-            throw new IllegalStateException("이미 시작된 모임이에요.");
+        if (g.isEndedAt(Times.now())) {
+            throw new IllegalStateException("이미 끝난 모임이에요.");
         }
         if (participantRepository.existsByGatheringIdAndUserId(id, userId)) {
             throw new AlreadyJoinedException();
@@ -176,7 +177,7 @@ public class GatheringService {
     public void update(Long id, Long userId, GatheringCreateRequest req) {
         getForEdit(id, userId);
         int updated = repository.updateIfFits(id, req.title(), req.description(), req.tag(), req.placeName(),
-                req.latitude(), req.longitude(), req.startAt(), req.maxPeople());
+                req.latitude(), req.longitude(), req.startAt(), req.endAt(), req.maxPeople());
         if (updated == 0) {
             throw new IllegalArgumentException(
                     "지금 참여한 사람이 " + get(id).getCurrentPeople() + "명이라 정원을 그보다 적게 줄일 수 없어요.");

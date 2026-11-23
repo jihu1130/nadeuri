@@ -1,13 +1,18 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- 내 모임 목록의 모임 한 줄. past=true면 지난 모임으로 흐리게 -->
+<!--/* 내 모임 목록의 모임 한 줄. past=true면 끝난 모임으로 흐리게. 상태 배지는 컨트롤러가 넣은 now 기준 */-->
 <a th:fragment="row(g, past)" class="mine-item" th:classappend="${past} ? 'is-past'"
-   th:href="@{/gatherings/{id}(id=${g.id})}">
+   th:href="@{/gatherings/{id}(id=${g.id})}" th:with="st=${g.statusAt(now)}">
   <span class="mine-emoji" aria-hidden="true" th:text="${g.tag.emoji}">🚶</span>
   <span class="mine-copy">
-    <strong th:text="${g.title}">모임 이름</strong>
-    <span class="mine-meta" th:text="${#temporals.format(g.startAt, 'M월 d일 (E) HH:mm') + ' · ' + g.placeName}">시간 · 장소</span>
+    <span class="mine-title-row">
+      <strong th:text="${g.title}">모임 이름</strong>
+      <span class="status-badge" th:classappend="${st.cssClass}" th:text="${st.label}">모집 중</span>
+    </span>
+    <span class="mine-meta" th:text="${#temporals.format(g.startAt, 'M월 d일 (E) HH:mm') + ' ~ '
+          + #temporals.format(g.endAt, g.startAt.toLocalDate() == g.endAt.toLocalDate() ? 'HH:mm' : 'M월 d일 HH:mm')
+          + ' · ' + g.placeName}">시간 · 장소</span>
   </span>
   <span class="mine-count" th:text="${g.currentPeople + '/' + g.maxPeople + '명'}">1/6명</span>
 </a>

@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Entity
@@ -38,6 +39,10 @@ public class Gathering {
     @Column(nullable = false)
     private LocalDateTime startAt;
 
+    /** KST 기준 끝나는 시각 (시작 + 진행 시간). 항상 startAt보다 뒤 */
+    @Column(nullable = false)
+    private LocalDateTime endAt;
+
     private int maxPeople;
 
     /** 참여 인원은 GatheringRepository.incrementIfAvailable()로만 원자적으로 증가시킨다 */
@@ -46,7 +51,11 @@ public class Gathering {
     private LocalDateTime createdAt;
 
     public Gathering(String title, String description, ActivityTag tag, String placeName,
-                     double latitude, double longitude, LocalDateTime startAt, int maxPeople) {
+                     double latitude, double longitude, LocalDateTime startAt, LocalDateTime endAt,
+                     int maxPeople) {
+        if (!endAt.isAfter(startAt)) {
+            throw new IllegalArgumentException("끝나는 시간은 시작 시간보다 뒤여야 해요.");
+        }
         this.title = title;
         this.description = description;
         this.tag = tag;
@@ -54,6 +63,7 @@ public class Gathering {
         this.latitude = latitude;
         this.longitude = longitude;
         this.startAt = startAt;
+        this.endAt = endAt;
         this.maxPeople = maxPeople;
         this.currentPeople = 1; // 주최자
         this.createdAt = Times.now();
@@ -61,5 +71,26 @@ public class Gathering {
 
     public boolean isFull() {
         return currentPeople >= maxPeople;
+    }
+
+    /** 시작 시간이 지났는가 (진행 중 또는 종료) */
+    public boolean isStartedAt(LocalDateTime now) {
+        return !startAt.isAfter(now);
+    }
+
+    /** 끝나는 시간이 지났는가 */
+    public boolean isEndedAt(LocalDateTime now) {
+        return !endAt.isAfter(now);
+    }
+
+    public GatheringStatus statusAt(LocalDateTime now) {
+        if (isEndedAt(now)) return GatheringStatus.ENDED;
+        if (isStartedAt(now)) return GatheringStatus.ONGOING;
+        return isFull() ? GatheringStatus.FULL : GatheringStatus.RECRUITING;
+    }
+
+    /** 진행 시간(분) */
+    public long durationMinutes() {
+        return Duration.between(startAt, endAt).toMinutes();
     }
 }

@@ -8,7 +8,8 @@
 |---|---|
 | 주변 모임 지도 | 내 위치 반경 5km 안의 모임을 카카오맵 위에 이모지 핀으로 표시하고, 아래쪽 목록으로도 보여 줍니다 |
 | 현재 날씨 | 내 위치의 기상청 단기예보(기온, 하늘상태, 강수확률)를 상단에 표시합니다 |
-| 모임 만들기 | 카카오 장소 검색이나 지도 클릭으로 장소를 고르고 활동 종류, 시간, 인원을 입력합니다 |
+| 모임 만들기 | 카카오 장소 검색이나 지도 클릭으로 장소를 고르고 활동 종류, 시작 시간, 진행 시간(30분~12시간), 인원을 입력합니다 |
+| 모임 상태 | 시작·끝나는 시간과 인원으로 **모집 중 / 모집 마감 / 진행 중 / 종료**를 계산해 배지로 보여 줍니다. 진행 중인 모임은 주변 검색에 남고 늦게 합류할 수 있으며, 끝난 모임은 검색에서 빠집니다 |
 | 모임 상세 | 모임 시각의 날씨 예보를 보여 주고, 야외 활동에 비 예보가 있으면 ☔ 경고를 띄웁니다. 카카오맵 길찾기도 연결됩니다 |
 | 로그인 | 아이디 + 비밀번호로 가입·로그인하거나 카카오로 로그인합니다. 둘러보기는 누구나 가능하고, 모임 만들기와 참여는 로그인이 필요합니다 |
 | 참여하기 | 정원 초과와 중복 참여를 막습니다. 회원 ID로 참여 기록을 남깁니다 |
@@ -66,6 +67,7 @@ kakao:
 ## DB 테이블 관리 (Flyway)
 - 테이블 구조는 `src/main/resources/db/migration/` 안의 SQL 파일로 관리합니다. 앱이 뜰 때 Flyway가 아직 적용하지 않은 파일을 순서대로 실행합니다.
 - `V1__init.sql`: 처음 테이블(gathering, participant, users)
+- `V2__add_gathering_end_at.sql`: 모임 끝나는 시간 `end_at` 추가 (기존 모임은 시작 + 2시간으로 채움)
 - **테이블을 바꿀 때는 기존 파일을 고치지 말고** `V2__설명.sql`처럼 새 파일을 추가하세요. 예: `V2__add_gathering_cover_image.sql`
 - Hibernate는 테이블을 직접 바꾸지 않고 코드와 맞는지 **확인만**(`ddl-auto: validate`) 합니다. 맞지 않으면 앱이 뜨지 않으니, 엔티티를 바꾸면 SQL 파일도 같이 추가하세요.
 - Flyway 도입 전부터 쓰던 DB는 V1을 실행하지 않고 "이미 V1"로 기록만 합니다(`baseline-on-migrate`). 데이터는 그대로입니다.
@@ -165,14 +167,14 @@ nadeuri
 | POST | `/gatherings` | 모임 생성 🔒 |
 | GET | `/gatherings/{id}` | 모임 상세 (날씨 예보 포함) |
 | GET | `/gatherings/{id}/sign-in` | 로그인한 뒤 상세 화면으로 돌아오기 🔒 |
-| POST | `/gatherings/{id}/join` | 참여 🔒 |
+| POST | `/gatherings/{id}/join` | 참여 (끝나기 전까지. 진행 중이면 늦게 합류) 🔒 |
 | POST | `/gatherings/{id}/leave` | 참여 취소 (시작 전, 주최자 제외) 🔒 |
 | POST | `/gatherings/{id}/delete` | 모임 삭제 (주최자만) 🔒 |
 | GET | `/gatherings/{id}/edit` | 모임 수정 화면 (주최자만, 시작 전) 🔒 |
 | POST | `/gatherings/{id}/edit` | 모임 수정 저장 🔒 |
 | GET | `/me/gatherings` | 내 모임 (만든 모임 / 참여한 모임) 🔒 |
 | GET | `/api/weather/forecast?lat=&lng=` | 날짜별·시간별 예보 JSON (모임 시간 고르기용) |
-| GET | `/api/gatherings?lat=&lng=&radius=` | 주변 모임 JSON (반경 100~20,000m, 좌표가 범위를 벗어나면 400) |
+| GET | `/api/gatherings?lat=&lng=&radius=` | 끝나지 않은 주변 모임 JSON (반경 100~20,000m, 좌표가 범위를 벗어나면 400). `endAt`, `status`(RECRUITING·FULL·ONGOING·ENDED), `statusLabel` 포함 |
 | GET | `/api/weather?lat=&lng=` | 현재 날씨 JSON |
 
 🔒 표시는 로그인이 필요합니다. 로그인하지 않았으면 `/login`으로 이동합니다. POST 요청에는 CSRF 토큰이 필요하고, Thymeleaf의 `th:action`이 토큰을 자동으로 넣어 줍니다.
@@ -194,6 +196,8 @@ nadeuri
 - [ ] 데이터가 늘어나면 MySQL 공간 인덱스(`ST_Distance_Sphere`)로 검색 전환
 - [x] DB 마이그레이션 도구 도입 (Flyway)
 - [x] 한국어 오류 화면 (404·400·403·500)
+- [x] 모임 끝나는 시간과 상태 (모집 중·모집 마감·진행 중·종료)
+- [ ] 끝난 모임 후기, "다음에 또 만나요"
 
 ## 작업 기록
 날짜별 작업 내용은 [`doc/user`](doc/user) 폴더에 `YYMMDD.md` 형식으로 남깁니다.

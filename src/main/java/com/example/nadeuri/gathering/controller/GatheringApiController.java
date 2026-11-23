@@ -2,11 +2,13 @@ package com.example.nadeuri.gathering.controller;
 
 import com.example.nadeuri.gathering.dto.GatheringResponse;
 import com.example.nadeuri.gathering.service.GatheringService;
+import com.example.nadeuri.global.util.Times;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -25,7 +27,8 @@ public class GatheringApiController {
             @RequestParam @DecimalMin("-90") @DecimalMax("90") double lat,
             @RequestParam @DecimalMin("-180") @DecimalMax("180") double lng,
             @RequestParam(defaultValue = "3000") @DecimalMin("100") @DecimalMax("20000") double radius) {
+        LocalDateTime now = Times.now();
         return service.findNearby(lat, lng, radius)
-                .stream().map(GatheringResponse::from).toList();
+                .stream().map(g -> GatheringResponse.from(g, now)).toList();
     }
 }

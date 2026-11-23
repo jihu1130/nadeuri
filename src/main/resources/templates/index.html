@@ -109,6 +109,18 @@
     const d = new Date(dt);
     return `${d.getMonth() + 1}월 ${d.getDate()}일 · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
+  /* 모임 상태 배지: 모집 중은 기본이라 표시하지 않고, 진행 중·모집 마감만 붙인다 */
+  const BADGE_CLASS = { ONGOING: 'ongoing', FULL: 'full' };
+  function badge(g) {
+    const cls = BADGE_CLASS[g.status];
+    return cls ? ` <span class="status-badge ${cls}">${esc(g.statusLabel)}</span>` : '';
+  }
+  /* 진행 중이면 끝나는 시간을, 아니면 시작 시간을 보여 준다 */
+  function when(g) {
+    if (g.status !== 'ONGOING') return fmt(g.startAt);
+    const e = new Date(g.endAt);
+    return `${String(e.getHours()).padStart(2, '0')}:${String(e.getMinutes()).padStart(2, '0')}까지`;
+  }
   function esc(s) {
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -236,7 +248,7 @@
         pinOverlay.setMap(map);
         const info = new kakao.maps.CustomOverlay({
           position: pos, yAnchor: 1.45, clickable: true, zIndex: 4,
-          content: `<a class="map-info" href="/gatherings/${g.id}"><b>${esc(g.title)}</b><span>${esc(g.placeName)}</span><span>${fmt(g.startAt)} · ${g.currentPeople}/${g.maxPeople}명</span><span class="more">모임 자세히 보기 →</span></a>`
+          content: `<a class="map-info" href="/gatherings/${g.id}"><b>${esc(g.title)}</b>${badge(g)}<span>${esc(g.placeName)}</span><span>${when(g)} · ${g.currentPeople}/${g.maxPeople}명</span><span class="more">모임 자세히 보기 →</span></a>`
         });
         pin.addEventListener('click', e => { e.stopPropagation(); openInfo?.setMap(null); info.setMap(map); openInfo = info; });
         overlays.push(pinOverlay, info);
@@ -244,7 +256,7 @@
       const item = document.createElement('a');
       item.className = 'meetup-item';
       item.href = `/gatherings/${g.id}`;
-      item.innerHTML = `<span class="meetup-emoji">${esc(g.emoji)}</span><span class="meetup-copy"><span class="meetup-tag">${esc(g.tagLabel)}</span><strong>${esc(g.title)}</strong><span class="meetup-meta">${esc(g.placeName)}</span><span class="meetup-time">${fmt(g.startAt)} <i>·</i> ${g.currentPeople}/${g.maxPeople}명</span></span><span class="meetup-arrow" aria-hidden="true">↗</span>`;
+      item.innerHTML = `<span class="meetup-emoji">${esc(g.emoji)}</span><span class="meetup-copy"><span class="meetup-tag">${esc(g.tagLabel)}${badge(g)}</span><strong>${esc(g.title)}</strong><span class="meetup-meta">${esc(g.placeName)}</span><span class="meetup-time">${when(g)} <i>·</i> ${g.currentPeople}/${g.maxPeople}명</span></span><span class="meetup-arrow" aria-hidden="true">↗</span>`;
       if (map) item.addEventListener('mouseenter', () => map.panTo(pos));
       document.getElementById('list').appendChild(item);
     });

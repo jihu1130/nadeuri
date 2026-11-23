@@ -27,7 +27,7 @@
       <th:block th:each="g : ${hostedUpcoming}"><a th:replace="~{fragments/gathering-row :: row(${g}, false)}"></a></th:block>
     </div>
     <details class="mine-past" th:unless="${hostedPast.isEmpty()}">
-      <summary th:text="${'지난 모임 ' + hostedPast.size() + '개'}">지난 모임</summary>
+      <summary th:text="${'끝난 모임 ' + hostedPast.size() + '개'}">끝난 모임</summary>
       <div class="mine-list">
         <th:block th:each="g : ${hostedPast}"><a th:replace="~{fragments/gathering-row :: row(${g}, true)}"></a></th:block>
       </div>
@@ -44,7 +44,7 @@
       <th:block th:each="g : ${joinedUpcoming}"><a th:replace="~{fragments/gathering-row :: row(${g}, false)}"></a></th:block>
     </div>
     <details class="mine-past" th:unless="${joinedPast.isEmpty()}">
-      <summary th:text="${'지난 모임 ' + joinedPast.size() + '개'}">지난 모임</summary>
+      <summary th:text="${'끝난 모임 ' + joinedPast.size() + '개'}">끝난 모임</summary>
       <div class="mine-list">
         <th:block th:each="g : ${joinedPast}"><a th:replace="~{fragments/gathering-row :: row(${g}, true)}"></a></th:block>
       </div>

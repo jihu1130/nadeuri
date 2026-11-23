@@ -29,7 +29,7 @@ class GatheringServiceTest {
 
     private Gathering create(double lat, double lng, int max) {
         return service.create(new GatheringCreateRequest("테스트", null, ActivityTag.WALK, "장소",
-                lat, lng, Times.now().plusDays(1), max), HOST_ID);
+                lat, lng, Times.now().plusDays(1), 120, max), HOST_ID);
     }
 
     @Test

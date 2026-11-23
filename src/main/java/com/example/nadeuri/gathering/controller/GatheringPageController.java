@@ -112,17 +112,23 @@ public class GatheringPageController {
         // 참여·주최 여부는 참여 기록으로 판단한다 (목록은 회원 정보와 이어 붙인 것이라 회원이 없으면 빠질 수 있음)
         model.addAttribute("joined", service.hasJoined(id, me));
         model.addAttribute("isHost", service.isHost(id, me));
-        model.addAttribute("started", !g.getStartAt().isAfter(Times.now()));
+        LocalDateTime now = Times.now();
+        // started: 참여 취소·수정을 막는 기준 / ended: 참여를 막는 기준 (진행 중에는 늦게 합류 가능)
+        model.addAttribute("started", g.isStartedAt(now));
+        model.addAttribute("ended", g.isEndedAt(now));
+        model.addAttribute("status", g.statusAt(now));
+        model.addAttribute("durationLabel", GatheringFormView.label(g.durationMinutes()));
         model.addAttribute("weather",
                 weatherService.forecastAt(g.getLatitude(), g.getLongitude(), g.getStartAt()));
         return "gathering/detail";
     }
 
-    /** 내 모임: 내가 만든 모임 / 참여한 모임 (각각 다가오는 모임과 지난 모임으로 나눔) */
+    /** 내 모임: 내가 만든 모임 / 참여한 모임 (각각 끝나지 않은 모임과 끝난 모임으로 나눔) */
     @GetMapping("/me/gatherings")
     public String mine(Model model, @AuthenticationPrincipal LoginUser user) {
         LocalDateTime now = Times.now();
-        Predicate<Gathering> upcoming = g -> g.getStartAt().isAfter(now);
+        model.addAttribute("now", now); // 목록 한 줄마다 상태 배지 계산용
+        Predicate<Gathering> upcoming = g -> !g.isEndedAt(now);
         List<Gathering> hosted = service.hostedBy(user.getId());
         List<Gathering> joined = service.joinedBy(user.getId());
         model.addAttribute("hostedUpcoming", hosted.stream().filter(upcoming).toList());
@@ -132,7 +138,7 @@ public class GatheringPageController {
         return "gathering/mine";
     }
 
-    /** 지난 모임은 최근 것부터 */
+    /** 끝난 모임은 최근 것부터 */
     private static List<Gathering> reversed(List<Gathering> list) {
         List<Gathering> copy = new ArrayList<>(list);
         Collections.reverse(copy);

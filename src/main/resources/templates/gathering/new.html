@@ -63,6 +63,14 @@
       <div class="wx-summary" id="wxSummary" aria-live="polite"></div>
     </div>
 
+    <!--/* 진행 시간: 끝나는 시간 = 시작 + 진행 시간 (서버에서 계산) */-->
+    <label for="durationMinutes">진행 시간</label>
+    <select id="durationMinutes" name="durationMinutes" required>
+      <option th:each="d : ${f.durationOptions()}" th:value="${d.minutes}" th:text="${d.label}"
+              th:selected="${d.minutes == f.durationMinutes}">2시간</option>
+    </select>
+    <p class="field-help" id="endHint">끝나는 시간이 지나면 모임이 '종료'로 바뀌고 주변 검색에서 빠집니다.</p>
+
     <label for="maxPeople">최대 인원</label>
     <input id="maxPeople" name="maxPeople" type="number" min="2" max="50" required th:value="${f.maxPeople}">
     <p class="field-help">주최자를 포함한 총 인원입니다. 2명부터 50명까지 설정할 수 있습니다.</p>
@@ -295,6 +303,7 @@
     function renderSummary() {
       const dt = selectedDateTime();
       $('startAt').value = `${sel.date}T${pad(sel.hour)}:${pad(sel.minute)}`;
+      updateEndHint();
       const when = `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${WEEK[dt.getDay()]}) ${hourLabel(sel.hour).replace('시', '')}:${pad(sel.minute)}`;
       const f = forecastFor(sel.date, sel.hour);
       const info = f?.info;
@@ -465,6 +474,20 @@
       if (e.key === 'Enter') { e.preventDefault(); search(); } // 엔터로 폼이 제출되지 않게
     });
   });
+
+  /* 진행 시간 아래에 "16:30에 끝나요"처럼 끝나는 시간을 보여 준다 */
+  function updateEndHint() {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec($('startAt').value || '');
+    const hint = $('endHint');
+    if (!m || !hint) return;
+    const start = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    const end = new Date(start.getTime() + Number($('durationMinutes').value) * 60000);
+    const hhmm = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+    const sameDay = end.toDateString() === start.toDateString();
+    hint.textContent = `${sameDay ? '' : `${end.getMonth() + 1}월 ${end.getDate()}일 `}${hhmm}에 끝나요. 끝나는 시간이 지나면 '종료'로 바뀌고 주변 검색에서 빠집니다.`;
+  }
+  $('durationMinutes').addEventListener('change', updateEndHint);
+  updateEndHint();
 
   document.querySelector('form').addEventListener('submit', e => {
     if (!$('latitude').value) {

@@ -14,6 +14,7 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
 
     /**
      * 반경 검색 (하버사인 공식). MySQL과 H2 모두에서 동작한다.
+     * 아직 끝나지 않은 모임(모집 중 + 진행 중)만 찾는다. 진행 중인 모임은 시작 시간이 앞서므로 먼저 나온다.
      * 바운딩 박스로 먼저 후보를 거른 뒤(인덱스 사용) 정확한 거리를 계산한다.
      * 경도 범위는 날짜변경선(±180°)을 넘을 수 있어 두 구간(lng1, lng2)으로 나눠 받는다.
      * 넘지 않는 경우 두 구간은 같은 값이다.
@@ -23,7 +24,7 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
             WHERE g.latitude BETWEEN :minLat AND :maxLat
               AND (g.longitude BETWEEN :minLng1 AND :maxLng1
                    OR g.longitude BETWEEN :minLng2 AND :maxLng2)
-              AND g.start_at > :now
+              AND g.end_at > :now
               AND 6371000 * ACOS(GREATEST(-1.0, LEAST(1.0,
                     COS(RADIANS(:lat)) * COS(RADIANS(g.latitude)) * COS(RADIANS(g.longitude) - RADIANS(:lng))
                   + SIN(RADIANS(:lat)) * SIN(RADIANS(g.latitude))))) <= :meters
@@ -56,13 +57,14 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
     @Query("""
             UPDATE Gathering g SET g.title = :title, g.description = :description, g.tag = :tag,
                    g.placeName = :placeName, g.latitude = :latitude, g.longitude = :longitude,
-                   g.startAt = :startAt, g.maxPeople = :maxPeople
+                   g.startAt = :startAt, g.endAt = :endAt, g.maxPeople = :maxPeople
             WHERE g.id = :id AND g.currentPeople <= :maxPeople
             """)
     int updateIfFits(@Param("id") Long id, @Param("title") String title, @Param("description") String description,
                      @Param("tag") ActivityTag tag, @Param("placeName") String placeName,
                      @Param("latitude") double latitude, @Param("longitude") double longitude,
-                     @Param("startAt") LocalDateTime startAt, @Param("maxPeople") int maxPeople);
+                     @Param("startAt") LocalDateTime startAt, @Param("endAt") LocalDateTime endAt,
+                     @Param("maxPeople") int maxPeople);
 
     /** 참여 취소: 주최자 1명 아래로는 내려가지 않게 원자적으로 1 줄인다 */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

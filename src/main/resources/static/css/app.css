@@ -323,6 +323,20 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 .error-text { margin: 0 0 20px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .error-actions { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
 
+/* ===== 모임 상태 배지 (모집 중 / 모집 마감 / 진행 중 / 종료) ===== */
+.status-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 750; line-height: 1.5; white-space: nowrap; vertical-align: middle; }
+.status-badge.recruiting { background: var(--yellow-soft); color: #6f5712; }
+.status-badge.full { background: #efeee9; color: #5b574b; }
+.status-badge.ongoing { background: #e3f4e6; color: #23703a; }
+.status-badge.ended { background: #ecebe7; color: #8a8577; }
+.meetup-tag .status-badge, .map-info .status-badge { padding: 0 6px; font-size: 10px; }
+.map-info .status-badge { align-self: flex-start; }
+.detail-labels { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.detail-labels .status-badge { padding: 5px 10px; font-size: 12px; }
+.mine-title-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mine-title-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mine-title-row .status-badge { flex: none; }
+
 /* 홈 지도: "크게 보기" 버튼과 화면 전체로 펼친 지도 */
 .map-expand-button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 5px; min-height: 30px; padding: 5px 10px; border: 1px solid #e3ddca; border-radius: 8px;
   background: #fff; color: #5c5542; font: inherit; font-size: 11px; font-weight: 700; white-space: nowrap; cursor: pointer; }

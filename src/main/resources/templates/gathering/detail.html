@@ -20,11 +20,18 @@
 
   <div class="page-heading"><p class="eyebrow">모임 상세</p><h1>모임 정보</h1></div>
   <div class="card detail-summary">
-    <div class="activity-label" th:text="${g.tag.emoji + ' ' + g.tag.label}"></div>
+    <div class="detail-labels">
+      <span class="activity-label" th:text="${g.tag.emoji + ' ' + g.tag.label}"></span>
+      <span class="status-badge" th:classappend="${status.cssClass}" th:text="${status.label}">모집 중</span>
+    </div>
     <h2 class="gathering-title" th:text="${g.title}"></h2>
     <dl class="detail-facts">
       <div><dt>장소</dt><dd th:text="${g.placeName}"></dd></div>
-      <div><dt>시작 시간</dt><dd th:text="${#temporals.format(g.startAt, 'yyyy년 M월 d일 (E) HH:mm') + ' (한국 시간)'}"></dd></div>
+      <!--/* 끝나는 날이 시작한 날과 다르면 날짜도 함께 적는다 */-->
+      <div><dt>시간</dt><dd th:with="sameDay=${g.startAt.toLocalDate() == g.endAt.toLocalDate()}"
+          th:text="${#temporals.format(g.startAt, 'yyyy년 M월 d일 (E) HH:mm') + ' ~ '
+                   + #temporals.format(g.endAt, sameDay ? 'HH:mm' : 'M월 d일 (E) HH:mm')
+                   + ' (' + durationLabel + ', 한국 시간)'}"></dd></div>
       <div><dt>현재 인원 / 정원</dt><dd th:text="${g.currentPeople + '명 / ' + g.maxPeople + '명'}"></dd></div>
       <div><dt>주최</dt><dd th:text="${host != null ? host.nickname : '나들이 (샘플 모임)'}">주최자</dd></div>
     </dl>
@@ -90,10 +97,11 @@
       </form>
     </th:block>
 
-    <!--/* 아직 참여 안 함 */-->
+    <!--/* 아직 참여 안 함: 끝나기 전까지 참여 가능 (진행 중이면 늦게 합류) */-->
     <th:block th:unless="${joined}">
-      <button th:if="${started}" class="btn" type="button" style="width:100%" disabled>이미 시작된 모임</button>
-      <th:block th:unless="${started}">
+      <button th:if="${ended}" class="btn" type="button" style="width:100%" disabled>끝난 모임</button>
+      <p th:if="${started and !ended and !g.full}" class="detail-note">지금 진행 중인 모임이에요. 늦게라도 합류할 수 있어요.</p>
+      <th:block th:unless="${ended}">
         <form th:if="${loginUser != null or g.full}" method="post" th:action="@{/gatherings/{id}/join(id=${g.id})}">
           <button class="btn" type="submit" style="width:100%" th:disabled="${g.full}"
                   th:text="${g.full} ? '모집 마감' : '참여하기'">참여하기</button>
