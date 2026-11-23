@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>회원 탈퇴 - 나들이</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="auth-page">
+<main class="auth-layout">
+  <a href="/" class="auth-brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 10.2c0 5.1-7 11-7 11s-7-5.9-7-11a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></span><span>나들이</span></a>
+  <div class="card login-card">
+    <h1>회원 탈퇴</h1>
+    <p class="meta">탈퇴하면 아래 정보가 지워지고 되돌릴 수 없어요.</p>
+
+    <ul class="withdraw-list">
+      <li>회원 정보 (아이디, 닉네임, 프로필 사진)</li>
+      <li>내가 만든 모임 <b th:text="${hostedCount + '개'}">0개</b> — 다른 참여자의 기록과 함께 삭제돼요</li>
+      <li>참여한 모임 <b th:text="${joinedCount + '개'}">0개</b> — 참여자 목록에서 빠져요</li>
+    </ul>
+
+    <div class="errors" th:if="${error}" th:text="${error}"></div>
+
+    <form method="post" th:action="@{/me/withdraw}"
+          onsubmit="return confirm('정말 탈퇴할까요? 되돌릴 수 없어요.');">
+      <th:block th:if="${local}">
+        <label for="password">비밀번호 확인</label>
+        <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="지금 비밀번호 입력">
+      </th:block>
+      <label class="withdraw-confirm">
+        <input type="checkbox" name="confirm" value="true" required>
+        <span>위 내용을 확인했고, 탈퇴에 동의해요.</span>
+      </label>
+      <button type="submit" class="btn danger" style="width:100%; margin-top:16px">탈퇴하기</button>
+    </form>
+    <a th:href="@{/me/gatherings}" class="browse-link">취소하고 돌아가기</a>
+  </div>
+</main>
+</body>
+</html>

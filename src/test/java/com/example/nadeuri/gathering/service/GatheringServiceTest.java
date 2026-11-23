@@ -70,6 +70,45 @@ class GatheringServiceTest {
     }
 
     @Test
+    void 참여_취소를_동시에_두_번_눌러도_오류_없이_한_번만_빠진다() throws Exception {
+        for (int round = 0; round < 5; round++) {
+            Gathering g = create(37.5, 127.0, 5);
+            long userId = 3000L + round;
+            service.join(g.getId(), userId);
+
+            ExecutorService pool = Executors.newFixedThreadPool(2);
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<String>> results = new ArrayList<>();
+            for (int i = 0; i < 2; i++) {
+                results.add(pool.submit(() -> {
+                    start.await();
+                    try {
+                        service.leave(g.getId(), userId);
+                        return "ok";
+                    } catch (IllegalStateException e) {
+                        return "message";   // 화면에 안내 문구로 보여 주는 예외
+                    }
+                }));
+            }
+            start.countDown();
+            List<String> outcomes = new ArrayList<>();
+            for (Future<String> f : results) outcomes.add(f.get(10, TimeUnit.SECONDS)); // 다른 예외면 여기서 실패
+            pool.shutdown();
+
+            assertThat(outcomes).containsExactlyInAnyOrder("ok", "message");
+            assertThat(service.get(g.getId()).getCurrentPeople()).isEqualTo(1);
+            assertThat(service.hasJoined(g.getId(), userId)).isFalse();
+        }
+    }
+
+    @Test
+    void 주변_검색은_최대_개수까지만_돌려준다() {
+        double lat = -45.0, lng = 170.0;   // 다른 테스트와 겹치지 않는 곳 (뉴질랜드 남섬)
+        for (int i = 0; i < GatheringService.MAX_NEARBY_RESULTS + 5; i++) create(lat, lng, 5);
+        assertThat(service.findNearby(lat, lng, 1000)).hasSize(GatheringService.MAX_NEARBY_RESULTS);
+    }
+
+    @Test
     void 날짜변경선_건너편_모임도_검색된다() {
         Gathering east = create(0, 179.99, 5);
         List<Long> ids = service.findNearby(0, -179.99, 5000).stream().map(Gathering::getId).toList();

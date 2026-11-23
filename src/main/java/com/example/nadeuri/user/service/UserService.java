@@ -1,5 +1,6 @@
 package com.example.nadeuri.user.service;
 
+import com.example.nadeuri.gathering.service.GatheringService;
 import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.dto.KakaoProfile;
 import com.example.nadeuri.user.dto.SignUpRequest;
@@ -18,6 +19,7 @@ public class UserService {
 
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
+    private final GatheringService gatheringService;
 
     /** 카카오 로그인 성공 시: 처음이면 가입, 이미 있으면 프로필만 갱신 */
     @Transactional
@@ -49,6 +51,26 @@ public class UserService {
         } catch (DataIntegrityViolationException e) {
             throw new DuplicateUsernameException();
         }
+    }
+
+    public User get(Long userId) {
+        return repository.findById(userId).orElseThrow(() -> new IllegalStateException("이미 탈퇴한 회원이에요."));
+    }
+
+    /**
+     * 회원 탈퇴. 만든 모임은 지우고, 참여한 모임에서는 빠진 뒤 회원 정보를 지운다.
+     * 아이디 회원은 비밀번호를 한 번 더 확인한다 (카카오 회원은 비밀번호가 없음).
+     *
+     * @throws IllegalArgumentException 비밀번호가 맞지 않음
+     */
+    @Transactional
+    public void withdraw(Long userId, String password) {
+        User user = get(userId);
+        if (user.isLocal() && (password == null || !passwordEncoder.matches(password, user.getPassword()))) {
+            throw new IllegalArgumentException("비밀번호가 맞지 않아요.");
+        }
+        gatheringService.removeAllFor(userId);
+        repository.delete(user);
     }
 
     @Transactional

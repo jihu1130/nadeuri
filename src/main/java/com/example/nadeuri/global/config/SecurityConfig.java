@@ -2,11 +2,15 @@ package com.example.nadeuri.global.config;
 
 import com.example.nadeuri.global.security.LoginUser;
 import com.example.nadeuri.user.service.KakaoOAuth2UserService;
+import com.example.nadeuri.user.service.LoginAttemptService;
 import com.example.nadeuri.user.service.UserService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -54,7 +58,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    ObjectProvider<ClientRegistrationRepository> clients,
                                                    KakaoOAuth2UserService kakaoUserService,
-                                                   UserService userService) throws Exception {
+                                                   UserService userService,
+                                                   LoginAttemptService loginAttempts) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
                         // "/gatherings/*" 보다 먼저 와야 함
@@ -86,8 +91,8 @@ public class SecurityConfig {
                         .loginProcessingUrl("/login")
                         .usernameParameter("username")
                         .passwordParameter("password")
-                        .successHandler(localLoginSuccessHandler(userService))
-                        .failureUrl("/login?error=local"))
+                        .successHandler(localLoginSuccessHandler(userService, loginAttempts))
+                        .failureHandler(localLoginFailureHandler(loginAttempts)))
                 .logout(logout -> logout.logoutSuccessUrl("/"))
                 // H2 콘솔(h2 프로필 개발용)은 iframe과 자체 폼을 쓴다
                 .csrf(csrf -> csrf.ignoringRequestMatchers(antMatcher("/h2-console/**")))
@@ -112,7 +117,8 @@ public class SecurityConfig {
     }
 
     /** 아이디 로그인 성공 시 마지막 로그인 시각을 남기고, 원래 가려던 곳(없으면 홈)으로 보낸다 */
-    private static AuthenticationSuccessHandler localLoginSuccessHandler(UserService userService) {
+    private static AuthenticationSuccessHandler localLoginSuccessHandler(UserService userService,
+                                                                         LoginAttemptService loginAttempts) {
         SavedRequestAwareAuthenticationSuccessHandler handler = new SavedRequestAwareAuthenticationSuccessHandler() {
             @Override
             public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -120,11 +126,31 @@ public class SecurityConfig {
                 if (authentication.getPrincipal() instanceof LoginUser user) {
                     userService.markLoggedIn(user.getId());
                 }
+                loginAttempts.recordSuccess(request.getParameter("username"));
                 super.onAuthenticationSuccess(request, response, authentication);
             }
         };
         handler.setRequestCache(REQUEST_CACHE);
         return handler;
+    }
+
+    /**
+     * 아이디 로그인 실패: 틀린 횟수를 세고, 너무 많이 틀려 잠긴 아이디면 따로 안내한다.
+     * (잠김은 LocalUserDetailsService가 LockedException으로 알리는데, Spring Security가 다른 예외로 감싸서 줄 수 있다)
+     */
+    private static AuthenticationFailureHandler localLoginFailureHandler(LoginAttemptService loginAttempts) {
+        return (request, response, exception) -> {
+            if (isLocked(exception)) {
+                response.sendRedirect(request.getContextPath() + "/login?error=locked");
+                return;
+            }
+            loginAttempts.recordFailure(request.getParameter("username"));
+            response.sendRedirect(request.getContextPath() + "/login?error=local");
+        };
+    }
+
+    private static boolean isLocked(AuthenticationException e) {
+        return e instanceof LockedException || e.getCause() instanceof LockedException;
     }
 
     /**

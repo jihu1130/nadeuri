@@ -4,6 +4,7 @@ import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.dto.SignUpRequest;
 import com.example.nadeuri.user.exception.DuplicateUsernameException;
 import com.example.nadeuri.user.repository.UserRepository;
+import com.example.nadeuri.user.service.LoginAttemptService;
 import com.example.nadeuri.user.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -120,6 +121,40 @@ class LocalLoginTest {
                 .andExpect(redirectedUrl("/login?error=local"));
         mvc.perform(get("/login").param("error", "local"))
                 .andExpect(content().string(containsString("아이디 또는 비밀번호가 맞지 않")));
+    }
+
+    @Test
+    void 비밀번호를_여러_번_틀리면_맞는_비밀번호로도_잠시_로그인할_수_없다() throws Exception {
+        String username = uniqueUsername();
+        userService.signUp(new SignUpRequest(username, "abcd1234", "abcd1234", "닉"));
+
+        for (int i = 0; i < LoginAttemptService.MAX_FAILURES; i++) {
+            mvc.perform(formLogin("/login").user(username).password("wrong1234"))
+                    .andExpect(redirectedUrl("/login?error=local"));
+        }
+        mvc.perform(formLogin("/login").user(username.toUpperCase()).password("abcd1234"))
+                .andExpect(unauthenticated())
+                .andExpect(redirectedUrl("/login?error=locked"));
+        mvc.perform(get("/login").param("error", "locked"))
+                .andExpect(content().string(containsString("15분 뒤에 다시")));
+
+        // 다른 아이디는 영향 없음
+        String other = uniqueUsername();
+        userService.signUp(new SignUpRequest(other, "abcd1234", "abcd1234", "닉"));
+        mvc.perform(formLogin("/login").user(other).password("abcd1234")).andExpect(authenticated());
+    }
+
+    @Test
+    void 로그인에_성공하면_틀린_횟수가_초기화된다() throws Exception {
+        String username = uniqueUsername();
+        userService.signUp(new SignUpRequest(username, "abcd1234", "abcd1234", "닉"));
+        for (int i = 0; i < LoginAttemptService.MAX_FAILURES - 1; i++) {
+            mvc.perform(formLogin("/login").user(username).password("wrong1234"));
+        }
+        mvc.perform(formLogin("/login").user(username).password("abcd1234")).andExpect(authenticated());
+        mvc.perform(formLogin("/login").user(username).password("wrong1234"))
+                .andExpect(redirectedUrl("/login?error=local"));
+        mvc.perform(formLogin("/login").user(username).password("abcd1234")).andExpect(authenticated());
     }
 
     @Test

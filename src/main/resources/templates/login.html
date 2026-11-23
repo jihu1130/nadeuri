@@ -17,7 +17,10 @@
     <div class="errors" th:if="${param.error != null and param.error[0] == 'local'}">
       아이디 또는 비밀번호가 맞지 않습니다. 입력한 정보를 확인하세요.
     </div>
-    <div class="errors" th:if="${param.error != null and param.error[0] != 'local'}">
+    <div class="errors" th:if="${param.error != null and param.error[0] == 'locked'}">
+      비밀번호를 여러 번 틀려서 이 아이디로는 잠시 로그인할 수 없어요. 15분 뒤에 다시 시도해 주세요.
+    </div>
+    <div class="errors" th:if="${param.error != null and param.error[0] != 'local' and param.error[0] != 'locked'}">
       로그인을 완료하지 못했습니다. 아이디와 비밀번호를 확인한 뒤 다시 시도하세요.
     </div>
 

@@ -18,6 +18,7 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
      * 바운딩 박스로 먼저 후보를 거른 뒤(인덱스 사용) 정확한 거리를 계산한다.
      * 경도 범위는 날짜변경선(±180°)을 넘을 수 있어 두 구간(lng1, lng2)으로 나눠 받는다.
      * 넘지 않는 경우 두 구간은 같은 값이다.
+     * 결과는 시작 시간이 빠른 순으로 최대 limit개까지만 돌려준다 (넓은 반경에서 한꺼번에 너무 많이 내려가지 않게).
      */
     @Query(value = """
             SELECT * FROM gathering g
@@ -28,14 +29,15 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
               AND 6371000 * ACOS(GREATEST(-1.0, LEAST(1.0,
                     COS(RADIANS(:lat)) * COS(RADIANS(g.latitude)) * COS(RADIANS(g.longitude) - RADIANS(:lng))
                   + SIN(RADIANS(:lat)) * SIN(RADIANS(g.latitude))))) <= :meters
-            ORDER BY g.start_at
+            ORDER BY g.start_at, g.id
+            LIMIT :limit
             """, nativeQuery = true)
     List<Gathering> findNearby(@Param("lat") double lat, @Param("lng") double lng,
                                @Param("meters") double meters,
                                @Param("minLat") double minLat, @Param("maxLat") double maxLat,
                                @Param("minLng1") double minLng1, @Param("maxLng1") double maxLng1,
                                @Param("minLng2") double minLng2, @Param("maxLng2") double maxLng2,
-                               @Param("now") LocalDateTime now);
+                               @Param("now") LocalDateTime now, @Param("limit") int limit);
 
     /**
      * 자리가 남아 있을 때만 인원을 1 늘린다. 단일 UPDATE 문이라 동시 요청에도

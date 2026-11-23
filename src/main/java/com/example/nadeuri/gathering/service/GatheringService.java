@@ -25,6 +25,8 @@ public class GatheringService {
     public static final double MIN_RADIUS = 100;
     public static final double MAX_RADIUS = 20_000;
     private static final double METERS_PER_DEGREE = 111_320.0;
+    /** 주변 검색 한 번에 돌려주는 최대 모임 수 */
+    public static final int MAX_NEARBY_RESULTS = 200;
 
     private final GatheringRepository repository;
     private final ParticipantRepository participantRepository;
@@ -62,7 +64,7 @@ public class GatheringService {
         }
 
         return repository.findNearby(lat, lng, radius, minLat, maxLat,
-                lng1[0], lng1[1], lng2[0], lng2[1], Times.now());
+                lng1[0], lng1[1], lng2[0], lng2[1], Times.now(), MAX_NEARBY_RESULTS);
     }
 
     public Gathering get(Long id) {
@@ -121,7 +123,8 @@ public class GatheringService {
 
     /**
      * 참여 취소. 참여 기록을 지우고 인원을 1 줄인다.
-     * @throws IllegalStateException 이미 시작된 모임, 참여하지 않은 모임, 주최자인 경우
+     * 실제로 지운 경우에만 인원을 줄여서, 취소를 동시에 두 번 눌러도 한 번만 빠진다.
+     * @throws IllegalStateException 이미 시작된 모임, 참여하지 않은(또는 이미 취소한) 모임, 주최자인 경우
      */
     @Transactional
     public void leave(Long id, Long userId) {
@@ -134,8 +137,9 @@ public class GatheringService {
         if (p.isHost()) {
             throw new IllegalStateException("주최자는 참여를 취소할 수 없어요. 모임을 없애려면 모임 삭제를 눌러 주세요.");
         }
-        participantRepository.delete(p);
-        participantRepository.flush();
+        if (participantRepository.deleteMember(id, userId) == 0) {
+            throw new IllegalStateException("이미 참여를 취소했어요.");
+        }
         repository.decrementIfAbove1(id);
     }
 
@@ -181,6 +185,23 @@ public class GatheringService {
         if (updated == 0) {
             throw new IllegalArgumentException(
                     "지금 참여한 사람이 " + get(id).getCurrentPeople() + "명이라 정원을 그보다 적게 줄일 수 없어요.");
+        }
+    }
+
+    /**
+     * 회원 탈퇴할 때 그 회원의 모임 기록을 정리한다.
+     * - 만든 모임: 모임 삭제와 같이 지운다 (참여 기록 포함)
+     * - 참여한 모임: 참여 기록을 지우고 인원을 1 줄인다 (끝난 모임 포함, 인원 수를 맞추기 위해)
+     */
+    @Transactional
+    public void removeAllFor(Long userId) {
+        for (Gathering g : hostedBy(userId)) {
+            delete(g.getId(), userId);
+        }
+        for (Gathering g : joinedBy(userId)) {
+            if (participantRepository.deleteMember(g.getId(), userId) > 0) {
+                repository.decrementIfAbove1(g.getId());
+            }
         }
     }
 

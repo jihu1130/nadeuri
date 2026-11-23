@@ -5,6 +5,7 @@ import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.dto.SignUpRequest;
 import com.example.nadeuri.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -21,10 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class LocalUserDetailsService implements UserDetailsService {
 
     private final UserRepository repository;
+    private final LoginAttemptService loginAttempts;
 
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        // 비밀번호를 너무 많이 틀린 아이디는 비밀번호를 확인하지 않고 막는다
+        if (loginAttempts.isBlocked(username)) {
+            throw new LockedException("로그인 시도 횟수 초과");
+        }
         User user = repository.findByProviderAndProviderId(User.PROVIDER_LOCAL, SignUpRequest.normalizeUsername(username))
                 .orElseThrow(() -> new UsernameNotFoundException("가입되지 않은 아이디"));
         return new LoginUser(user.getId(), user.getNickname(), user.getProfileImageUrl(), user.getPassword());

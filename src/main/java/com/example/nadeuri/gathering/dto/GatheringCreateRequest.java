@@ -16,7 +16,7 @@ public record GatheringCreateRequest(
         @NotBlank @Size(max = 100) String title,
         @Size(max = 1000) String description,
         @NotNull ActivityTag tag,
-        @NotBlank String placeName,
+        @NotBlank @Size(max = 255, message = "장소 이름은 255자까지 쓸 수 있어요.") String placeName,
         @NotNull @DecimalMin("-90") @DecimalMax("90") Double latitude,
         @NotNull @DecimalMin("-180") @DecimalMax("180") Double longitude,
         @NotNull @Future @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startAt,

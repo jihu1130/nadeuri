@@ -8,7 +8,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -36,9 +35,7 @@ public class KmaNowcastClient {
     public KmaNowcastClient(@Value("${kma.nowcast-url}") String url,
                             @Value("${kma.key-param:authKey}") String keyParam,
                             @Value("${kma.service-key:}") String serviceKey) {
-        DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(url);
-        factory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
-        this.restClient = RestClient.builder().uriBuilderFactory(factory).build();
+        this.restClient = KmaHttp.restClient(url);
         this.keyParam = keyParam;
         this.serviceKey = serviceKey;
     }
@@ -85,7 +82,7 @@ public class KmaNowcastClient {
                     e.getStatusCode().value(), e.getResponseBodyAsString());
             return null;
         } catch (Exception e) {
-            log.warn("초단기실황 API 호출 실패 ({}, {}): {}", nx, ny, e.getMessage());
+            log.warn("초단기실황 API 호출 실패 ({}, {}): {}", nx, ny, KmaHttp.describe(e, serviceKey));
             return null;
         }
     }

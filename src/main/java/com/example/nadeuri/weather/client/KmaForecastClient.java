@@ -8,7 +8,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
-import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,11 +37,7 @@ public class KmaForecastClient {
     public KmaForecastClient(@Value("${kma.base-url}") String baseUrl,
                              @Value("${kma.key-param:authKey}") String keyParam,
                              @Value("${kma.service-key:}") String serviceKey) {
-        // 키에 들어 있을 수 있는 +, /, = 문자를 확실히 인코딩하도록 VALUES_ONLY 모드 사용
-        // (공공데이터포털을 쓸 때는 "Decoding" 키를 설정해야 한다)
-        DefaultUriBuilderFactory factory = new DefaultUriBuilderFactory(baseUrl);
-        factory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
-        this.restClient = RestClient.builder().uriBuilderFactory(factory).build();
+        this.restClient = KmaHttp.restClient(baseUrl);
         this.keyParam = keyParam;
         this.serviceKey = serviceKey;
         if (serviceKey.isBlank()) {
@@ -67,8 +62,11 @@ public class KmaForecastClient {
         return LocalDateTime.of(date.minusDays(1), LocalTime.of(23, 0)); // 00:00~02:09
     }
 
-    /** 격자 + 발표시각 단위 캐싱. 실패하면 빈 목록 */
-    @Cacheable("weather")
+    /**
+     * 격자 + 발표시각 단위 캐싱. 실패하면 빈 목록.
+     * 빈 목록은 캐시하지 않는다 (잠깐 실패한 결과가 다음 발표까지 몇 시간 동안 남지 않게).
+     */
+    @Cacheable(value = "weather", unless = "#result.isEmpty()")
     public List<WeatherInfo> fetch(int nx, int ny, LocalDateTime base) {
         try {
             JsonNode root = restClient.get()
@@ -97,7 +95,7 @@ public class KmaForecastClient {
                     e.getStatusCode().value(), e.getResponseBodyAsString());
             return List.of();
         } catch (Exception e) {
-            log.warn("기상청 API 호출 실패 ({}, {}): {}", nx, ny, e.getMessage());
+            log.warn("기상청 API 호출 실패 ({}, {}): {}", nx, ny, KmaHttp.describe(e, serviceKey));
             return List.of();
         }
     }

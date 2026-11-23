@@ -369,3 +369,12 @@ body.map-expanded { overflow: hidden; }
 
 /* ===== 지금 날씨 칩: "지금"(관측) / "예보" 표시 ===== */
 .weather-label { margin-right: 2px; color: #8c7125; font-size: 11px; font-weight: 750; }
+
+/* 회원 탈퇴 화면 */
+.withdraw-list { margin: 14px 0 4px; padding: 12px 14px 12px 30px; border: 1px solid #eed2cb; border-radius: 10px; background: #fff7f5; color: #5b4a44; font-size: 13px; line-height: 1.7; }
+.withdraw-list b { color: var(--error); }
+.withdraw-confirm { display: flex; align-items: flex-start; gap: 8px; margin: 16px 0 0; color: #4c483d; font-size: 13px; font-weight: 600; cursor: pointer; }
+.withdraw-confirm input { width: 18px; height: 18px; min-height: 0; flex: 0 0 18px; margin: 1px 0 0; padding: 0; accent-color: var(--error); }
+.mine-account { margin: 26px 0 8px; text-align: center; }
+.mine-account a { color: #9a9486; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.mine-account a:hover { color: var(--error); }

@@ -163,6 +163,19 @@ class GatheringLifecycleTest {
     }
 
     @Test
+    void 장소_이름이_너무_길면_오류_화면_대신_다시_입력받는다() throws Exception {
+        User host = user("긴장소");
+        String start = Times.now().plusDays(2).toLocalDate() + "T10:00";
+        mvc.perform(post("/gatherings").with(oauth2Login().oauth2User(login(host))).with(csrf())
+                        .param("title", "긴 장소").param("tag", "WALK").param("placeName", "가".repeat(256))
+                        .param("latitude", "37.5").param("longitude", "127.0")
+                        .param("startAt", start).param("durationMinutes", "120").param("maxPeople", "6"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("장소 이름은 255자까지")));
+        assertThat(service.hostedBy(host.getId())).isEmpty();
+    }
+
+    @Test
     void 상세_화면은_상태_배지와_참여_가능_여부를_보여준다() throws Exception {
         User a = user("구경");
         Gathering ongoing = saved("상세-진행", -30, 90, 5);

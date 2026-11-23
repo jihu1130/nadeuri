@@ -30,6 +30,14 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
             """)
     List<ParticipantView> findViews(@Param("gatheringId") Long gatheringId);
 
+    /**
+     * 참여 취소: 주최자가 아닌 참여 기록 하나를 지운다.
+     * DELETE 한 문장이라 같은 요청이 동시에 두 번 와도 하나만 1건을 지우고 나머지는 0건이 된다.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM Participant p WHERE p.gatheringId = :gatheringId AND p.userId = :userId AND p.host = false")
+    int deleteMember(@Param("gatheringId") Long gatheringId, @Param("userId") Long userId);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM Participant p WHERE p.gatheringId = :gatheringId")
     int deleteAllByGatheringId(@Param("gatheringId") Long gatheringId);
