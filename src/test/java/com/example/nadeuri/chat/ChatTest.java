@@ -194,4 +194,49 @@ class ChatTest {
         mvc.perform(get("/gatherings/" + g.getPublicId()))
                 .andExpect(content().string(not(containsString(chatLink))));
     }
+
+    @Test
+    void 내가_보낸_메시지만_지울_수_있고_지우면_내용이_비고_삭제로_표시된다() {
+        User host = user("주최");
+        User a = user("참여자");
+        Gathering g = gathering(host);
+        gatherings.join(g.getId(), a.getId());
+        ChatMessageView mine = chat.send(g.getId(), a.getId(), "잘못 보냄");
+        ChatMessageView hosts = chat.send(g.getId(), host.getId(), "주최자 글");
+
+        assertThatThrownBy(() -> chat.delete(g.getId(), a.getId(), hosts.id()))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("내가 보낸");
+        assertThat(chat.delete(g.getId(), a.getId(), mine.id())).isEqualTo(mine.id());
+        assertThat(chat.delete(g.getId(), a.getId(), mine.id())).as("두 번 지워도 괜찮음").isEqualTo(mine.id());
+
+        List<ChatMessageView> history = chat.history(g.getId(), host.getId(), null);
+        ChatMessageView deleted = history.stream().filter(m -> m.id().equals(mine.id())).findFirst().orElseThrow();
+        assertThat(deleted.deleted()).isTrue();
+        assertThat(deleted.content()).isEmpty();
+        assertThat(messages.findById(mine.id()).orElseThrow().getContent()).as("DB에서도 비움").isEmpty();
+        ChatMessageView kept = history.stream().filter(m -> m.id().equals(hosts.id())).findFirst().orElseThrow();
+        assertThat(kept.deleted()).isFalse();
+        assertThat(kept.content()).isEqualTo("주최자 글");
+    }
+
+    @Test
+    void 다른_모임의_메시지나_참여를_취소한_뒤에는_지울_수_없다() {
+        User host = user("주최");
+        User a = user("참여자");
+        Gathering g = gathering(host);
+        Gathering other = gathering(user("다른주최"));
+        gatherings.join(g.getId(), a.getId());
+        gatherings.join(other.getId(), a.getId());
+        ChatMessageView inOther = chat.send(other.getId(), a.getId(), "다른 방");
+        ChatMessageView mine = chat.send(g.getId(), a.getId(), "여기");
+
+        assertThatThrownBy(() -> chat.delete(g.getId(), a.getId(), inOther.id()))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("찾을 수 없어요");
+        assertThatThrownBy(() -> chat.delete(g.getId(), a.getId(), 99_999_999L))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        gatherings.leave(g.getId(), a.getId());
+        assertThatThrownBy(() -> chat.delete(g.getId(), a.getId(), mine.id()))
+                .isInstanceOf(NotParticipantException.class);
+    }
 }

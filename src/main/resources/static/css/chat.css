@@ -36,6 +36,19 @@
 .chat-msg.is-mine .chat-line { flex-direction: row-reverse; }
 .chat-msg.is-mine .chat-bubble { border-color: var(--yellow); border-radius: 14px 4px 14px 14px; background: var(--yellow-soft); }
 
+/* 지운 메시지: 흐린 기울임 글씨 */
+.chat-msg.is-deleted .chat-bubble,
+.chat-msg.is-mine.is-deleted .chat-bubble { border-color: var(--line); background: #f6f4ee; color: #9a9585; font-style: italic; }
+/* 내 메시지 "삭제": 마우스를 올리거나 키보드로 가거나, 휴대폰은 말풍선을 눌렀을 때만 보인다 */
+.chat-del-form { flex: none; margin: 0; opacity: 0; pointer-events: none; transition: opacity .12s; }
+.chat-msg.is-mine:hover .chat-del-form,
+.chat-msg.is-mine:focus-within .chat-del-form,
+.chat-msg.show-actions .chat-del-form { opacity: 1; pointer-events: auto; }
+.chat-msg.is-mine:not(.is-deleted) .chat-bubble { cursor: pointer; }
+@media (hover: hover) { .chat-msg.is-mine:not(.is-deleted) .chat-bubble { cursor: default; } }
+.chat-del { padding: 3px 8px; border: 1px solid #ecd3ce; border-radius: 999px; background: #fff; color: var(--error); font-size: 11px; font-weight: 700; cursor: pointer; }
+.chat-del:hover { background: #fdf1ef; }
+
 /* "○○님이 입력 중…" — 입력칸 바로 위 한 줄, 점 세 개가 차례로 깜빡인다 */
 .chat-typing { display: flex; align-items: center; gap: 6px; margin: 0; padding: 5px 16px; overflow: hidden; background: var(--page); color: #7d7768; font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
 .chat-typing[hidden] { display: none; }

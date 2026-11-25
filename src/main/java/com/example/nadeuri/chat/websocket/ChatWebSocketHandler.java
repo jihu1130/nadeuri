@@ -39,6 +39,8 @@ import java.util.regex.Pattern;
  *   <li>입력 중: {"type":"typing","typing":true|false} → 저장하지 않고 같은 방의 다른 사람에게
  *       {"type":"typing","typing":true,"user":{"userId":"공개 UUID","nickname":"..."}}.
  *       한 연결에서 0.8초 안에 다시 온 "입력 중"은 무시한다.</li>
+ *   <li>삭제: {"type":"delete","id":메시지 id} → 내가 보낸 메시지면 내용을 지우고 같은 방 모두에게
+ *       {"type":"deleted","id":메시지 id}. 남의 메시지·없는 메시지는 보낸 사람에게만 error.</li>
  * </ul>
  * 방 목록은 이 서버 메모리에만 있다 (서버가 여러 대가 되면 Redis 등으로 바꿔야 함).
  */
@@ -96,8 +98,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             sendError(session, "메시지 형식이 올바르지 않아요.");
             return;
         }
-        if ("typing".equals(body.path("type").asText())) {
+        String type = body.path("type").asText();
+        if ("typing".equals(type)) {
             handleTyping(session, gatheringId, body.path("typing").asBoolean(true));
+            return;
+        }
+        if ("delete".equals(type)) {
+            handleDelete(session, gatheringId, userId, body.path("id"));
             return;
         }
         String content = body.path("content").asText(null);
@@ -133,6 +140,23 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) {
         log.debug("채팅 연결 오류 {}: {}", session.getId(), exception.getMessage());
+    }
+
+    /** 내 메시지 삭제 → 같은 방 모두에게 알린다 (도배 방지 횟수에는 넣지 않음) */
+    private void handleDelete(WebSocketSession session, Long gatheringId, Long userId, JsonNode id) throws IOException {
+        if (!id.canConvertToLong()) {
+            sendError(session, "메시지를 찾을 수 없어요.");
+            return;
+        }
+        try {
+            long deleted = chatService.delete(gatheringId, userId, id.asLong());
+            broadcast(gatheringId, Map.of("type", "deleted", "id", deleted));
+        } catch (NotParticipantException e) {
+            sendError(session, e.getMessage());
+            session.close(CloseStatus.POLICY_VIOLATION.withReason("not a participant"));
+        } catch (IllegalArgumentException e) {
+            sendError(session, e.getMessage());
+        }
     }
 
     /**

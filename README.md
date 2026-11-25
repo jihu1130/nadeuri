@@ -198,7 +198,7 @@ nadeuri
 | GET | `/me/gatherings` | 내 모임 (만든 모임 / 참여한 모임) 🔒 |
 | GET | `/gatherings/{id}/chat` | 모임 채팅 화면 (참여자만) 🔒 |
 | GET | `/api/gatherings/{id}/messages` | 지난 채팅 메시지 JSON (최근 50개, `?before=id` 더 이전, `?after=id` 그 뒤). 참여자가 아니면 403 |
-| WS | `/ws/gatherings/{id}/chat` | 채팅 WebSocket. 보내기 `{"content":"..."}`, 받기 `{"type":"message","message":{...}}` / `{"type":"error","message":"..."}` 🔒 |
+| WS | `/ws/gatherings/{id}/chat` | 채팅 WebSocket. 보내기 `{"content":"..."}`, 받기 `{"type":"message","message":{...}}` / `{"type":"error","message":"..."}`. 내 메시지 삭제 `{"type":"delete","id":N}` → 모두에게 `{"type":"deleted","id":N}` 🔒 |
 | GET | `/api/weather/forecast?lat=&lng=` | 날짜별·시간별 예보 JSON (모임 시간 고르기용) |
 | GET | `/api/gatherings?lat=&lng=&radius=` | 끝나지 않은 주변 모임 JSON (반경 100~20,000m, 좌표가 범위를 벗어나면 400). `endAt`, `status`(RECRUITING·FULL·ONGOING·ENDED), `statusLabel` 포함 |
 | POST | `/api/assistant/chat` | AI 도우미 질문 (`{"messages":[{"role":"user","text":"..."}],"lat":..,"lng":..}` → `{"reply":"..."}`). 로그인 필요(아니면 401), 1분 6번·하루 100번(넘으면 429), Gemini 키가 없거나 오류면 503 🔒 |
@@ -233,7 +233,7 @@ nadeuri
 ### 앞으로 할 일 (2026-11-23 추가)
 **채팅**
 - [x] 입력 중 표시 ("○○님이 입력 중…")
-- [ ] 보낸 메시지 전송 취소·삭제
+- [x] 보낸 메시지 삭제 (모두의 화면에 "삭제된 메시지예요")
 - [ ] 메시지 수정 (인스타그램처럼 "수정됨"을 누르면 수정 전 내용 확인)
 - [ ] 멘션 (`@닉네임`)
 - [x] 너무 빠른 전송 제한 (1초에 5개 넘게 보내면 3초 동안 전송 불가)
@@ -242,8 +242,8 @@ nadeuri
 - [ ] 챗봇 (어떤 서비스를 쓸지, 무엇을 도와줄지 결정 필요)
 
 **프로필·친구**
-- [ ] 별명(닉네임) 변경
-- [ ] 프로필 설정
+- [x] 별명(닉네임) 변경
+- [x] 프로필 설정
 - [ ] 끝난 모임 리뷰·별점 → 프로필에 평판 표시
 - [ ] 지금까지의 활동 기록을 프로필에 표시 (어디까지 공개할지 본인이 선택)
 - [ ] 친구 추가

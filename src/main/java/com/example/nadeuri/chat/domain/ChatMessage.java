@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/** 모임 채팅 메시지 한 줄. 고치거나 지우는 기능은 아직 없다 */
+/** 모임 채팅 메시지 한 줄. 보낸 사람은 지울 수 있다 (줄은 남기고 내용만 비움) */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -35,10 +35,25 @@ public class ChatMessage {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    /** 지운 시각. null이면 지우지 않은 메시지 */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     public ChatMessage(Long gatheringId, Long userId, String content) {
         this.gatheringId = gatheringId;
         this.userId = userId;
         this.content = content;
         this.createdAt = Times.now();
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
+    }
+
+    /** 삭제: 내용은 DB에서도 비운다 (다시 볼 수 없음) */
+    public void delete() {
+        if (isDeleted()) return;
+        this.content = "";
+        this.deletedAt = Times.now();
     }
 }

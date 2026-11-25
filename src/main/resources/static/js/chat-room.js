@@ -11,6 +11,8 @@ const ME = shell.dataset.me || null;              // 내 공개 UUID
  *    다른 사람의 typing은 마지막 신호 뒤 4초가 지나면 저절로 사라진다.
  * 5) 도배 방지: 1초에 5개를 넘게 보내면 서버가 3초 동안 막고 {"type":"rate_limited"}를 보낸다.
  *    막힌 글은 입력칸에 되돌려 놓고, 남은 초를 보여 주며 보내기 버튼을 잠근다.
+ * 6) 삭제: 내 말풍선에 마우스를 올리거나(휴대폰은 말풍선을 누르면) "삭제"가 보인다. 확인 창(confirm.js) 뒤
+ *    {"type":"delete","id":N}을 보내고, 서버가 방 모두에게 {"type":"deleted","id":N}을 보내면 "삭제된 메시지예요"로 바꾼다.
  */
 const $ = id => document.getElementById(id);
 const log = $('chatLog'), list = $('chatList'), input = $('chatInput'), sendBtn = $('chatSend');
@@ -155,6 +157,40 @@ function scrollToBottom() {
   log.scrollTop = log.scrollHeight;
 }
 
+const DELETED_TEXT = '삭제된 메시지예요';
+
+/** 말풍선을 "삭제된 메시지"로 바꾼다 (삭제 버튼도 없앤다) */
+function markDeleted(row) {
+  if (!row || row.classList.contains('is-deleted')) return;
+  row.classList.add('is-deleted');
+  row.classList.remove('show-actions');
+  row.querySelector('.chat-bubble').textContent = DELETED_TEXT;
+  row.querySelector('.chat-del-form')?.remove();
+}
+
+/** 내 메시지 옆 "삭제" 버튼. 확인 창은 confirm.js가 data-confirm을 보고 띄운다 */
+function deleteForm(id) {
+  const form = document.createElement('form');
+  form.className = 'chat-del-form';
+  form.dataset.confirm = '메시지를 삭제할까요? 모든 참여자 화면에서 "삭제된 메시지예요"로 바뀌고 되돌릴 수 없어요.';
+  const btn = document.createElement('button');
+  btn.type = 'submit';
+  btn.className = 'chat-del danger';
+  btn.textContent = '삭제';
+  form.appendChild(btn);
+  form.addEventListener('submit', e => {
+    // 처음 누를 때는 confirm.js가 막고 확인 창을 띄운다. 확인을 누르면 confirmed 표시와 함께 다시 들어온다
+    if (form.dataset.confirmed !== '1') return;
+    e.preventDefault();
+    if (!isOpen()) {
+      showError('연결이 끊겨서 지우지 못했어요. 다시 연결되면 해 주세요.');
+      return;
+    }
+    socket.send(JSON.stringify({ type: 'delete', id }));
+  });
+  return form;
+}
+
 /** 메시지 한 줄 요소. 사용자 글은 textContent로만 넣는다 (HTML로 해석되지 않게) */
 function messageEl(m) {
   const mine = m.userId === ME;
@@ -190,12 +226,21 @@ function messageEl(m) {
   line.className = 'chat-line';
   const bubble = document.createElement('p');
   bubble.className = 'chat-bubble';
-  bubble.textContent = m.content;
+  bubble.textContent = m.deleted ? DELETED_TEXT : m.content;
+  if (m.deleted) row.classList.add('is-deleted');
   const time = document.createElement('time');
   time.className = 'chat-time';
   time.dateTime = m.createdAt;
   time.textContent = timeLabel(at);
   line.append(bubble, time);
+  if (mine && !m.deleted) {
+    line.appendChild(deleteForm(m.id));
+    // 마우스가 없는 휴대폰: 내 말풍선을 누르면 "삭제"가 보였다 숨었다 한다
+    bubble.addEventListener('click', () => {
+      list.querySelectorAll('.chat-msg.show-actions').forEach(el => { if (el !== row) el.classList.remove('show-actions'); });
+      row.classList.toggle('show-actions');
+    });
+  }
   body.appendChild(line);
   row.appendChild(body);
   return row;
@@ -296,6 +341,8 @@ function connect() {
       add([data.message], 'bottom');
       removeTypist(data.message.userId);   // 보냈으면 더 이상 입력 중이 아님
       if (stick) scrollToBottom();
+    } else if (data.type === 'deleted') {
+      markDeleted(list.querySelector(`.chat-msg[data-id="${Number(data.id)}"]`));
     } else if (data.type === 'typing') {
       onTyping(data);
     } else if (data.type === 'rate_limited') {

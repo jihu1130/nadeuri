@@ -108,6 +108,26 @@ public class ChatService {
         User u = userRepository.findById(userId).orElse(null);
         return new ChatMessageView(m.getId(), u == null ? null : u.getPublicId(),
                 u == null ? null : u.getNickname(), u == null ? null : u.getProfileImageUrl(),
-                m.getContent(), m.getCreatedAt());
+                m.getContent(), m.getCreatedAt(), false);
+    }
+
+    /**
+     * 내가 보낸 메시지 지우기. 이미 지운 메시지면 아무것도 하지 않고 성공으로 본다.
+     * @return 지운 메시지 id
+     * @throws NotParticipantException  참여자가 아님
+     * @throws IllegalArgumentException 이 방의 메시지가 아니거나 내가 보낸 메시지가 아님
+     */
+    @Transactional
+    public long delete(Long gatheringId, Long userId, Long messageId) {
+        checkCanChat(gatheringId, userId);
+        ChatMessage m = messageId == null ? null : repository.findById(messageId).orElse(null);
+        if (m == null || !m.getGatheringId().equals(gatheringId)) {
+            throw new IllegalArgumentException("메시지를 찾을 수 없어요.");
+        }
+        if (!m.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("내가 보낸 메시지만 지울 수 있어요.");
+        }
+        m.delete();
+        return m.getId();
     }
 }

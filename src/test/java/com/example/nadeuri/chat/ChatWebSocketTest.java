@@ -242,6 +242,39 @@ class ChatWebSocketTest {
     }
 
     @Test
+    void 내_메시지를_지우면_같은_방_모두에게_알리고_남의_메시지는_못_지운다() throws Exception {
+        User host = user("주최");
+        User a = user("지우개");
+        Gathering g = gathering(host);
+        gatherings.join(g.getId(), a.getId());
+
+        Inbox hostInbox = new Inbox(), aInbox = new Inbox();
+        WebSocketSession hostWs = connect(g.getPublicId(), sessionCookie(host), base(), hostInbox);
+        WebSocketSession aWs = connect(g.getPublicId(), sessionCookie(a), base(), aInbox);
+        for (int i = 0; i < 50 && handler.connectionCount(g.getId()) < 2; i++) Thread.sleep(20);
+
+        aWs.sendMessage(new TextMessage("{\"content\":\"앗 오타\"}"));
+        long id = json.readTree(aInbox.messages.poll(5, TimeUnit.SECONDS)).path("message").path("id").asLong();
+        hostInbox.messages.poll(5, TimeUnit.SECONDS);
+
+        // 주최자가 남의 메시지를 지우려 하면 주최자에게만 오류
+        hostWs.sendMessage(new TextMessage("{\"type\":\"delete\",\"id\":" + id + "}"));
+        JsonNode error = json.readTree(hostInbox.messages.poll(5, TimeUnit.SECONDS));
+        assertThat(error.path("type").asText()).isEqualTo("error");
+        assertThat(aInbox.messages.poll(300, TimeUnit.MILLISECONDS)).isNull();
+
+        aWs.sendMessage(new TextMessage("{\"type\":\"delete\",\"id\":" + id + "}"));
+        for (Inbox inbox : new Inbox[]{hostInbox, aInbox}) {
+            JsonNode deleted = json.readTree(inbox.messages.poll(5, TimeUnit.SECONDS));
+            assertThat(deleted.path("type").asText()).isEqualTo("deleted");
+            assertThat(deleted.path("id").asLong()).isEqualTo(id);
+        }
+
+        hostWs.close();
+        aWs.close();
+    }
+
+    @Test
     void 참여자가_아니면_연결이_바로_끊긴다() throws Exception {
         Gathering g = gathering(user("주최"));
         User outsider = user("구경꾼");
