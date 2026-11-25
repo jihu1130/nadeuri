@@ -112,7 +112,10 @@ class GatheringMembershipTest {
 
         assertThatThrownBy(() -> service.delete(g.getId(), a.getId())).isInstanceOf(NotHostException.class);
         assertThat(gatheringRepository.existsById(g.getId())).isTrue();
+        // 다른 참여자가 있으면 주최자도 지울 수 없다 (모임장을 넘기도록 안내)
+        assertThatThrownBy(() -> service.delete(g.getId(), host.getId())).isInstanceOf(IllegalStateException.class);
 
+        service.leave(g.getId(), a.getId());
         service.delete(g.getId(), host.getId());
         assertThat(gatheringRepository.existsById(g.getId())).isFalse();
         assertThat(service.participants(g.getId())).isEmpty();
@@ -149,8 +152,12 @@ class GatheringMembershipTest {
         service.join(g.getId(), a.getId());
         String url = "/gatherings/" + g.getPublicId();
 
+        // 주최자: 다른 참여자가 있으므로 삭제 대신 모임장 넘기기 (받을 사람 목록에는 공개 UUID)
         mvc.perform(get(url).with(oauth2Login().oauth2User(login(host))))
-                .andExpect(content().string(containsString(">모임 삭제</button>")))
+                .andExpect(content().string(not(containsString(">모임 삭제</button>"))))
+                .andExpect(content().string(containsString("모임장 넘기기")))
+                .andExpect(content().string(containsString("value=\"" + a.getPublicId() + "\">참여자</option>")))
+                .andExpect(content().string(containsString("모임장을 넘긴 뒤 참여 취소로 나갈 수 있어요")))
                 .andExpect(content().string(not(containsString(">참여 취소</button>"))))
                 .andExpect(content().string(containsString("호스트")))
                 .andExpect(content().string(containsString("참여자 2명")));
@@ -269,5 +276,49 @@ class GatheringMembershipTest {
         mvc.perform(post("/gatherings/" + g.getPublicId() + "/delete").with(oauth2Login().oauth2User(login(host))).with(csrf()))
                 .andExpect(redirectedUrl("/me/gatherings"));
         assertThat(gatheringRepository.existsById(g.getId())).isFalse();
+    }
+
+    @Test
+    void 모임장_넘기기와_참여자가_있을_때_삭제_요청이_화면에서_동작한다() throws Exception {
+        User host = user("넘김주최");
+        User a = user("받는사람");
+        Gathering g = gathering(host, "넘기기 화면");
+        service.join(g.getId(), a.getId());
+        String url = "/gatherings/" + g.getPublicId();
+
+        mvc.perform(post(url + "/delete").with(oauth2Login().oauth2User(login(host))).with(csrf()))
+                .andExpect(redirectedUrl(url))
+                .andExpect(flash().attribute("message", containsString("모임장을 다른 참여자에게 넘겨")));
+        assertThat(gatheringRepository.existsById(g.getId())).isTrue();
+
+        mvc.perform(post(url + "/host").with(oauth2Login().oauth2User(login(host))).with(csrf()))
+                .andExpect(flash().attribute("message", containsString("골라 주세요")));
+        mvc.perform(post(url + "/host").param("to", a.getPublicId()).with(oauth2Login().oauth2User(login(host))).with(csrf()))
+                .andExpect(redirectedUrl(url))
+                .andExpect(flash().attribute("message", containsString("모임장을 넘겼어요")));
+        assertThat(service.isHost(g.getId(), a.getId())).isTrue();
+
+        // 예전 주최자는 이제 참여 취소 버튼, 새 모임장은 넘기기 화면
+        mvc.perform(get(url).with(oauth2Login().oauth2User(login(host))))
+                .andExpect(content().string(containsString(">참여 취소</button>")));
+        mvc.perform(get(url).with(oauth2Login().oauth2User(login(a))))
+                .andExpect(content().string(containsString("모임장 넘기기")));
+    }
+
+    @Test
+    void 내_모임은_만든_모임_개수를_보여주고_다_차면_새_모임_대신_안내한다() throws Exception {
+        User me = user("개수");
+        for (int i = 1; i < GatheringService.MAX_ACTIVE_HOSTED; i++) gathering(me, "개수" + i);
+        mvc.perform(get("/me/gatherings").with(oauth2Login().oauth2User(login(me))))
+                .andExpect(content().string(containsString(">4/5</span>")))
+                .andExpect(content().string(containsString("href=\"/gatherings/new\">+ 새 모임</a>")))
+                .andExpect(content().string(not(containsString("id=\"newGatheringLimited\""))));
+
+        gathering(me, "개수5");
+        mvc.perform(get("/me/gatherings").with(oauth2Login().oauth2User(login(me))))
+                .andExpect(content().string(containsString(">5/5</span>")))
+                .andExpect(content().string(containsString("id=\"newGatheringLimited\"")))
+                .andExpect(content().string(not(containsString("href=\"/gatherings/new\">+ 새 모임</a>"))))
+                .andExpect(content().string(containsString("5개까지 열 수 있어요")));
     }
 }

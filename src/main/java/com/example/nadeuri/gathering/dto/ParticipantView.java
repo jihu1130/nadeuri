@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 /** 모임 상세의 참여자 목록 한 줄 (참여 기록 + 회원 닉네임·사진) */
 public record ParticipantView(
         Long userId,
+        /** 회원의 공개 식별자(UUID). 화면의 폼(모임장 넘기기)에는 순번 id 대신 이 값을 쓴다 */
+        String publicId,
         String nickname,
         String profileImageUrl,
         boolean host,

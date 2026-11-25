@@ -12,6 +12,7 @@ import com.example.nadeuri.gathering.exception.NotHostException;
 import com.example.nadeuri.gathering.repository.GatheringRepository;
 import com.example.nadeuri.gathering.repository.ParticipantRepository;
 import com.example.nadeuri.global.util.Times;
+import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -176,19 +177,78 @@ public class GatheringService {
         repository.decrementIfAbove1(id);
     }
 
+    /** 모임 행을 쓰기 잠금으로 읽는다. 없으면 404 */
+    private Gathering getLocked(Long id) {
+        return repository.lockById(id).orElseThrow(() -> new GatheringNotFoundException(id));
+    }
+
     /**
      * 모임 삭제 (주최자만). 참여 기록과 채팅 메시지도 함께 지운다.
-     * @throws NotHostException 주최자가 아님
+     * 끝나지 않은 모임에 다른 참여자가 있으면 지우지 않는다 → 모임장을 넘기도록 안내.
+     * 모임 행을 잠근 채 참여자 수를 확인하므로, 확인하는 사이에 누가 참여해도 그 사람 기록이 함께 지워지지 않는다.
+     * @throws NotHostException     주최자가 아님
+     * @throws IllegalStateException 다른 참여자가 있는 끝나지 않은 모임
      */
     @Transactional
     public void delete(Long id, Long userId) {
-        Gathering g = get(id);
+        Gathering g = getLocked(id);
         if (!isHost(id, userId)) {
             throw new NotHostException();
         }
-        chatMessageRepository.deleteAllByGatheringId(id);
-        participantRepository.deleteAllByGatheringId(id);
+        if (!g.isEndedAt(Times.now()) && participantRepository.countByGatheringId(id) > 1) {
+            throw new IllegalStateException("다른 참여자가 있어서 모임을 삭제할 수 없어요. 모임장을 다른 참여자에게 넘겨 주세요.");
+        }
+        deleteWithRecords(g);
+    }
+
+    private void deleteWithRecords(Gathering g) {
+        chatMessageRepository.deleteAllByGatheringId(g.getId());
+        participantRepository.deleteAllByGatheringId(g.getId());
         repository.delete(g);
+    }
+
+    /** 끝나지 않은 모임에 주최자 말고 다른 참여자가 있는지 (상세 화면에서 삭제 대신 모임장 넘기기를 보여 줄지) */
+    public boolean mustTransferBeforeDelete(Gathering g) {
+        return !g.isEndedAt(Times.now()) && participantRepository.countByGatheringId(g.getId()) > 1;
+    }
+
+    /**
+     * 모임장 넘기기 (지금 모임장만, 끝나기 전까지).
+     * 넘긴 사람은 일반 참여자로 남는다. 받는 사람도 "끝나지 않은 모임 MAX_ACTIVE_HOSTED개" 제한을 지킨다.
+     * 모임 행과 받는 사람의 회원 행을 잠그고, 내리기·올리기를 조건부 UPDATE로 해서
+     * 동시에 두 번 넘기거나 받는 사람이 그새 나가도 모임장이 0명·2명이 되지 않는다 (실패하면 전부 되돌림).
+     * @param toPublicId 받을 참여자의 공개 식별자(UUID)
+     * @throws NotHostException     지금 모임장이 아님
+     * @throws IllegalStateException 끝난 모임, 참여자가 아닌 사람, 받는 사람이 이미 최대 개수만큼 모임을 연 경우 등
+     */
+    @Transactional
+    public void transferHost(Long id, Long userId, String toPublicId) {
+        Gathering g = getLocked(id);
+        if (!isHost(id, userId)) {
+            throw new NotHostException();
+        }
+        if (g.isEndedAt(Times.now())) {
+            throw new IllegalStateException("이미 끝난 모임은 모임장을 바꿀 수 없어요.");
+        }
+        User to = (toPublicId == null || toPublicId.isBlank()) ? null
+                : userRepository.findByPublicId(toPublicId).orElse(null);
+        if (to == null) {
+            throw new IllegalStateException("모임장을 넘길 참여자를 골라 주세요.");
+        }
+        if (to.getId().equals(userId)) {
+            throw new IllegalStateException("이미 이 모임의 모임장이에요.");
+        }
+        userRepository.lockById(to.getId());
+        if (repository.countActiveHostedBy(to.getId(), Times.now()) >= MAX_ACTIVE_HOSTED) {
+            throw new IllegalStateException(to.getNickname() + "님은 이미 모임을 " + MAX_ACTIVE_HOSTED
+                    + "개 열어 두어서 모임장을 넘길 수 없어요.");
+        }
+        if (participantRepository.demoteHost(id, userId) == 0) {
+            throw new NotHostException();
+        }
+        if (participantRepository.promoteMember(id, to.getId()) == 0) {
+            throw new IllegalStateException("이 모임에 참여한 사람에게만 모임장을 넘길 수 있어요.");
+        }
     }
 
     /**
@@ -224,13 +284,13 @@ public class GatheringService {
 
     /**
      * 회원 탈퇴할 때 그 회원의 모임 기록을 정리한다.
-     * - 만든 모임: 모임 삭제와 같이 지운다 (참여 기록 포함)
+     * - 만든 모임: 모임 삭제와 같이 지운다 (참여 기록 포함. 탈퇴는 다른 참여자가 있어도 지운다)
      * - 참여한 모임: 참여 기록을 지우고 인원을 1 줄인다 (끝난 모임 포함, 인원 수를 맞추기 위해)
      */
     @Transactional
     public void removeAllFor(Long userId) {
         for (Gathering g : hostedBy(userId)) {
-            delete(g.getId(), userId);
+            deleteWithRecords(getLocked(g.getId()));
         }
         for (Gathering g : joinedBy(userId)) {
             if (participantRepository.deleteMember(g.getId(), userId) > 0) {

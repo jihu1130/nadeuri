@@ -153,7 +153,13 @@ public class GatheringPageController {
         model.addAttribute("host", participants.stream().filter(ParticipantView::host).findFirst().orElse(null));
         // 참여·주최 여부는 참여 기록으로 판단한다 (목록은 회원 정보와 이어 붙인 것이라 회원이 없으면 빠질 수 있음)
         model.addAttribute("joined", service.hasJoined(id, me));
-        model.addAttribute("isHost", service.isHost(id, me));
+        boolean isHost = service.isHost(id, me);
+        model.addAttribute("isHost", isHost);
+        if (isHost) {
+            // 다른 참여자가 있으면 삭제 대신 모임장 넘기기를 보여 준다 (받을 사람 = 주최자 아닌 참여자)
+            model.addAttribute("mustTransfer", service.mustTransferBeforeDelete(g));
+            model.addAttribute("transferTargets", participants.stream().filter(p -> !p.host()).toList());
+        }
         LocalDateTime now = Times.now();
         // started: 참여 취소·수정을 막는 기준 / ended: 참여를 막는 기준 (진행 중에는 늦게 합류 가능)
         model.addAttribute("started", g.isStartedAt(now));
@@ -173,7 +179,12 @@ public class GatheringPageController {
         Predicate<Gathering> upcoming = g -> !g.isEndedAt(now);
         List<Gathering> hosted = service.hostedBy(user.getId());
         List<Gathering> joined = service.joinedBy(user.getId());
-        model.addAttribute("hostedUpcoming", hosted.stream().filter(upcoming).toList());
+        List<Gathering> hostedUpcoming = hosted.stream().filter(upcoming).toList();
+        model.addAttribute("hostedUpcoming", hostedUpcoming);
+        // "내가 만든 모임 n/5" 표시와, 다 찼을 때 "+ 새 모임"을 눌러도 만들기 화면으로 가지 않게 하는 데 쓴다
+        model.addAttribute("maxHosted", GatheringService.MAX_ACTIVE_HOSTED);
+        model.addAttribute("hostedLimitReached", hostedUpcoming.size() >= GatheringService.MAX_ACTIVE_HOSTED);
+        model.addAttribute("hostedLimitMessage", new GatheringLimitException().getMessage());
         model.addAttribute("hostedPast", reversed(hosted.stream().filter(upcoming.negate()).toList()));
         model.addAttribute("joinedUpcoming", joined.stream().filter(upcoming).toList());
         model.addAttribute("joinedPast", reversed(joined.stream().filter(upcoming.negate()).toList()));
@@ -204,12 +215,27 @@ public class GatheringPageController {
         Long id = service.idOf(publicId);
         try {
             service.delete(id, user.getId());
-        } catch (NotHostException e) {
+        } catch (NotHostException | IllegalStateException e) {
+            // IllegalState: 다른 참여자가 있는 모임 → 상세 화면에서 모임장 넘기기를 안내
             ra.addFlashAttribute("message", e.getMessage());
             return "redirect:/gatherings/" + publicId;
         }
         ra.addFlashAttribute("message", "모임을 삭제했어요.");
         return "redirect:/me/gatherings";
+    }
+
+    /** 모임장 넘기기: to = 받을 참여자의 공개 UUID. 넘긴 사람은 일반 참여자로 남는다 */
+    @PostMapping("/gatherings/{id}/host")
+    public String transferHost(@PathVariable("id") UUID publicId, @RequestParam(value = "to", required = false) String to,
+                               RedirectAttributes ra, @AuthenticationPrincipal LoginUser user) {
+        Long id = service.idOf(publicId);
+        try {
+            service.transferHost(id, user.getId(), to);
+            ra.addFlashAttribute("message", "모임장을 넘겼어요. 이제 일반 참여자로 함께해요.");
+        } catch (NotHostException | IllegalStateException e) {
+            ra.addFlashAttribute("message", e.getMessage());
+        }
+        return "redirect:/gatherings/" + publicId;
     }
 
     /**

@@ -27,7 +27,7 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
      */
     @Query("""
             SELECT new com.example.nadeuri.gathering.dto.ParticipantView(
-                       u.id, u.nickname, u.profileImageUrl, p.host, p.joinedAt)
+                       u.id, u.publicId, u.nickname, u.profileImageUrl, p.host, p.joinedAt)
             FROM Participant p JOIN User u ON u.id = p.userId
             WHERE p.gatheringId = :gatheringId
             ORDER BY p.host DESC, p.joinedAt ASC, p.id ASC
@@ -45,4 +45,23 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM Participant p WHERE p.gatheringId = :gatheringId")
     int deleteAllByGatheringId(@Param("gatheringId") Long gatheringId);
+
+    /** 이 모임의 참여 기록 수 (주최자 포함) */
+    long countByGatheringId(Long gatheringId);
+
+    /**
+     * 모임장 넘기기 1단계: 지금 모임장을 일반 참여자로 바꾼다.
+     * @return 1이면 성공, 0이면 이 사람이 (더 이상) 모임장이 아님
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Participant p SET p.host = false WHERE p.gatheringId = :gatheringId AND p.userId = :userId AND p.host = true")
+    int demoteHost(@Param("gatheringId") Long gatheringId, @Param("userId") Long userId);
+
+    /**
+     * 모임장 넘기기 2단계: 참여자 한 명을 모임장으로 바꾼다.
+     * @return 1이면 성공, 0이면 이 모임의 참여자가 아님 (그새 참여를 취소한 경우 등)
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Participant p SET p.host = true WHERE p.gatheringId = :gatheringId AND p.userId = :userId AND p.host = false")
+    int promoteMember(@Param("gatheringId") Long gatheringId, @Param("userId") Long userId);
 }

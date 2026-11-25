@@ -441,3 +441,21 @@ body.map-expanded { overflow: hidden; }
 .filter-chip.is-empty:not(.is-active) { color: #aaa493; background: #fcfbf8; }
 .filter-open { display: inline-flex; flex: none; align-items: center; gap: 5px; padding-top: 5px; color: #5e594d; font-size: 11px; font-weight: 650; white-space: nowrap; cursor: pointer; }
 .filter-open input { width: 14px; height: 14px; min-height: 0; margin: 0; padding: 0; accent-color: #d9a91f; cursor: pointer; }
+
+/* 내 모임: "내가 만든 모임 n/5" 개수 표시와 다 찼을 때 안내 */
+.mine-section-head h2 { display: inline-flex; align-items: center; gap: 8px; }
+.mine-count { display: inline-grid; height: 24px; place-items: center; padding: 0 8px; border-radius: 7px; background: var(--yellow-soft);
+  color: #6f5712; font-size: 12px; font-weight: 750; letter-spacing: 0; }
+.mine-count.is-full { background: #fde8e2; color: #b2492e; }
+button.link-btn { font: inherit; cursor: pointer; }
+.mine-limit-notice { margin: 0 0 10px; padding: 10px 12px; border: 1px solid #eed2cb; border-radius: 9px; background: #fff7f5; color: #a5452c; font-size: 13px; line-height: 1.5; }
+.mine-limit-notice[hidden] { display: none; }
+.mine-limit-notice.is-flash { animation: limit-flash .5s ease-out; }
+@keyframes limit-flash { from { background: #fde3db; } to { background: #fff7f5; } }
+
+/* 모임 상세: 모임장 넘기기 */
+.host-transfer label { margin: 6px 0 6px; font-size: 13px; }
+.host-transfer-row { display: flex; gap: 8px; }
+.host-transfer-row select { flex: 1; min-width: 0; min-height: 44px; }
+.host-transfer-row .btn { flex: none; min-height: 44px; }
+.host-delete-note { padding: 10px 12px; border-radius: 9px; background: var(--yellow-wash); font-size: 12px; line-height: 1.5; }

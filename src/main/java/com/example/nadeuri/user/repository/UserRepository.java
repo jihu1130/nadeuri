@@ -13,6 +13,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByProviderAndProviderId(String provider, String providerId);
 
+    /** 화면에 쓰는 공개 식별자(UUID)로 찾기 */
+    Optional<User> findByPublicId(String publicId);
+
     /**
      * 회원 행을 쓰기 잠금으로 읽는다 (SELECT … FOR UPDATE).
      * 같은 회원의 요청을 한 줄로 세울 때 쓴다 (예: 모임 개수 제한 확인 후 만들기).

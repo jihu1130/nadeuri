@@ -19,9 +19,18 @@
 
   <section class="card mine-section" aria-labelledby="hostedTitle">
     <div class="mine-section-head">
-      <h2 id="hostedTitle">내가 만든 모임</h2>
-      <a class="link-btn" th:href="@{/gatherings/new}">+ 새 모임</a>
+      <h2 id="hostedTitle">내가 만든 모임
+        <!--/* 끝나지 않은 모임 수 / 한 사람당 최대 개수 */-->
+        <span class="mine-count" th:classappend="${hostedLimitReached} ? 'is-full'"
+              th:title="${'끝나지 않은 모임은 ' + maxHosted + '개까지 열 수 있어요'}"
+              th:text="${hostedUpcoming.size() + '/' + maxHosted}">0/5</span>
+      </h2>
+      <a class="link-btn" th:unless="${hostedLimitReached}" th:href="@{/gatherings/new}">+ 새 모임</a>
+      <!--/* 다 찼으면 만들기 화면으로 가지 않고 안내만 보여 준다 (js/mine.js) */-->
+      <button type="button" class="link-btn" id="newGatheringLimited" th:if="${hostedLimitReached}"
+              aria-controls="hostedLimitNotice">+ 새 모임</button>
     </div>
+    <p class="mine-limit-notice" id="hostedLimitNotice" role="alert" hidden th:text="${hostedLimitMessage}"></p>
     <p class="mine-empty" th:if="${hostedUpcoming.isEmpty() and hostedPast.isEmpty()}">아직 만든 모임이 없어요.</p>
     <div class="mine-list" th:unless="${hostedUpcoming.isEmpty()}">
       <th:block th:each="g : ${hostedUpcoming}"><a th:replace="~{fragments/gathering-row :: row(${g}, false)}"></a></th:block>
@@ -53,5 +62,6 @@
 
   <p class="mine-account"><a th:href="@{/me/withdraw}">회원 탈퇴</a></p>
 </div>
+<script th:src="@{/js/mine.js}"></script>
 </body>
 </html>

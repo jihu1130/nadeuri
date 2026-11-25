@@ -2,7 +2,9 @@ package com.example.nadeuri.gathering.repository;
 
 import com.example.nadeuri.gathering.domain.ActivityTag;
 import com.example.nadeuri.gathering.domain.Gathering;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +17,14 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
 
     /** 주소에 쓰는 공개 식별자(UUID)로 찾기 */
     Optional<Gathering> findByPublicId(String publicId);
+
+    /**
+     * 모임 행을 쓰기 잠금으로 읽는다 (SELECT … FOR UPDATE).
+     * 삭제·모임장 넘기기처럼 "참여자 확인 → 변경"을 하는 동안 다른 사람의 참여(인원 UPDATE)가 끼어들지 못하게 한다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT g FROM Gathering g WHERE g.id = :id")
+    Optional<Gathering> lockById(@Param("id") Long id);
 
     /**
      * 반경 검색 (하버사인 공식). MySQL과 H2 모두에서 동작한다.

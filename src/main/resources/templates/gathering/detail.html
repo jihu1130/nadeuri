@@ -81,11 +81,24 @@
       <span aria-hidden="true">💬</span> 모임 채팅
     </a>
 
-    <!--/* 주최자: 모임 삭제 (참여 기록도 함께 지워짐) */-->
+    <!--/* 주최자: 정보 수정, 모임장 넘기기(다른 참여자가 있을 때, 끝나기 전까지), 모임 삭제(혼자이거나 끝난 모임) */-->
     <th:block th:if="${isHost}">
       <p class="detail-note">내가 만든 모임이에요.</p>
       <a th:unless="${started}" class="btn secondary btn-block" th:href="@{/gatherings/{id}/edit(id=${g.publicId})}">모임 정보 수정</a>
-      <form method="post" th:action="@{/gatherings/{id}/delete(id=${g.publicId})}"
+      <form th:if="${!ended and !transferTargets.isEmpty()}" method="post" class="host-transfer"
+            th:action="@{/gatherings/{id}/host(id=${g.publicId})}"
+            data-confirm="모임장을 넘길까요? 넘긴 뒤에는 일반 참여자가 되고, 모임 수정·삭제는 새 모임장만 할 수 있어요.">
+        <label for="transferTo">모임장 넘기기</label>
+        <div class="host-transfer-row">
+          <select id="transferTo" name="to" required>
+            <option value="" selected disabled>받을 참여자 고르기</option>
+            <option th:each="p : ${transferTargets}" th:value="${p.publicId}" th:text="${p.nickname}">닉네임</option>
+          </select>
+          <button class="btn secondary" type="submit">넘기기</button>
+        </div>
+      </form>
+      <p th:if="${mustTransfer}" class="detail-note host-delete-note">다른 참여자가 있어서 모임을 삭제할 수 없어요. 모임장을 넘긴 뒤 참여 취소로 나갈 수 있어요.</p>
+      <form th:unless="${mustTransfer}" method="post" th:action="@{/gatherings/{id}/delete(id=${g.publicId})}"
             data-confirm="모임을 삭제할까요? 참여자 기록도 함께 지워지고 되돌릴 수 없어요.">
         <button class="btn danger btn-block" type="submit">모임 삭제</button>
       </form>
