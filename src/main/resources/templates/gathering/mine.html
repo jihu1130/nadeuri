@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>내 모임 - 나들이</title>
   <link rel="stylesheet" th:href="@{/css/app.css}">
+  <link rel="stylesheet" th:href="@{/css/assistant.css}">
 </head>
 <body class="form-page mine-page">
 <header class="topbar">
@@ -63,5 +64,7 @@
   <p class="mine-account"><a th:href="@{/me/withdraw}">회원 탈퇴</a></p>
 </div>
 <script th:src="@{/js/mine.js}"></script>
+<div th:replace="~{fragments/assistant :: widget}"></div>
+<script th:src="@{/js/assistant.js}"></script>
 </body>
 </html>

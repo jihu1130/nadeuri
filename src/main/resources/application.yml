@@ -59,6 +59,12 @@ google:
   client-id: ${GOOGLE_CLIENT_ID:}
   client-secret: ${GOOGLE_CLIENT_SECRET:}
 
+gemini:
+  # AI 도우미 (Google Gemini API, 무료 등급). Google AI Studio(aistudio.google.com) > Get API key 에서 발급.
+  # 비어 있으면 도우미 버튼이 나오지 않는다. 무료 등급은 입력 내용이 구글 서비스 개선에 쓰일 수 있어 개인정보는 보내지 않는다.
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
+
 ---
 # MySQL 없이 테스트할 때: --spring.profiles.active=h2
 spring:

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/*
+  AI 도우미: 화면 오른쪽 아래 떠 있는 버튼 + 대화창.
+  Gemini 키가 설정된 경우(assistantEnabled)에만 나온다. 동작은 /js/assistant.js, 모양은 /css/assistant.css.
+  로그인 안 했으면 버튼을 누를 때 로그인 안내만 보여 준다.
+  사용법: <div th:replace="~{fragments/assistant :: widget}"></div> + 아래 script 한 줄
+*/-->
+<div th:fragment="widget" th:if="${assistantEnabled}" class="assistant"
+     th:attr="data-logged-in=${loginUser != null},data-csrf=${csrfToken != null ? csrfToken.token : ''},data-csrf-header=${csrfToken != null ? csrfToken.headerName : ''}">
+  <button type="button" class="assistant-toggle" aria-expanded="false" aria-controls="assistantPanel" title="AI 도우미">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c4.97 0 9 3.36 9 7.5S16.97 18 12 18c-.87 0-1.7-.1-2.49-.29L5 20l1.06-3.54C4.17 15.12 3 12.96 3 10.5 3 6.36 7.03 3 12 3Z" fill="currentColor"/><circle cx="8.5" cy="10.5" r="1.2" fill="#fff"/><circle cx="12" cy="10.5" r="1.2" fill="#fff"/><circle cx="15.5" cy="10.5" r="1.2" fill="#fff"/></svg>
+    <span class="assistant-toggle-label">AI 도우미</span>
+  </button>
+
+  <section id="assistantPanel" class="assistant-panel" role="dialog" aria-label="나들이 AI 도우미" hidden>
+    <header class="assistant-head">
+      <div>
+        <strong>나들이 AI 도우미</strong>
+        <p>근처 모임과 날씨를 보고 답해요</p>
+      </div>
+      <button type="button" class="assistant-close" aria-label="닫기">×</button>
+    </header>
+
+    <div class="assistant-log" aria-live="polite">
+      <div class="assistant-msg bot welcome">
+        안녕하세요! 이런 걸 물어보세요.
+        <div class="assistant-examples">
+          <button type="button" data-example="이번 주말 근처 산책 모임 있어?">이번 주말 산책 모임?</button>
+          <button type="button" data-example="내일 오후 날씨 피크닉하기 괜찮아?">내일 피크닉 날씨?</button>
+          <button type="button" data-example="모임은 어떻게 만들어?">모임 만드는 법</button>
+        </div>
+      </div>
+    </div>
+
+    <form class="assistant-form" autocomplete="off">
+      <textarea name="q" rows="1" maxlength="500" placeholder="무엇이든 물어보세요" aria-label="질문"></textarea>
+      <button type="submit" class="assistant-send" aria-label="보내기">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12 20 4l-6 16-2.5-6.5L4 12Z" fill="currentColor"/></svg>
+      </button>
+    </form>
+    <p class="assistant-note">질문과 근처 모임 정보가 Google Gemini로 전송돼요. 개인정보는 적지 마세요. AI 답은 틀릴 수 있어요.</p>
+  </section>
+</div>
+</body>
+</html>

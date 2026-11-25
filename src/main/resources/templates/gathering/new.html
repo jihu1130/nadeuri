@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title th:text="${editId != null} ? '모임 수정 - 나들이' : '모임 만들기 - 나들이'">모임 만들기 - 나들이</title>
   <link rel="stylesheet" th:href="@{/css/app.css}">
+  <link rel="stylesheet" th:href="@{/css/assistant.css}">
   <link rel="stylesheet" th:href="@{/css/weather-picker.css}">
   <link rel="stylesheet" th:href="@{/css/select-menu.css}">
 </head>
@@ -112,5 +113,7 @@
 <script th:src="@{/js/select-menu.js}"></script>
 <script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},libraries='services',autoload=false)}"></script>
 <script th:src="@{/js/gathering-form.js}"></script>
+<div th:replace="~{fragments/assistant :: widget}"></div>
+<script th:src="@{/js/assistant.js}"></script>
 </body>
 </html>

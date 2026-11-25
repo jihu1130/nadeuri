@@ -8,6 +8,7 @@
   <title>나들이 | 주변 모임 찾기</title>
   <link rel="preconnect" href="https://dapi.kakao.com">
   <link rel="stylesheet" th:href="@{/css/app.css}">
+  <link rel="stylesheet" th:href="@{/css/assistant.css}">
   <link rel="stylesheet" th:href="@{/css/select-menu.css}">
 </head>
 <body class="home-page">
@@ -118,5 +119,7 @@
 <script th:src="@{/js/select-menu.js}"></script>
 <script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"></script>
 <script th:src="@{/js/home.js}"></script>
+<div th:replace="~{fragments/assistant :: widget}"></div>
+<script th:src="@{/js/assistant.js}"></script>
 </body>
 </html>

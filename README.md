@@ -103,6 +103,12 @@ google:
 5. 요청하는 권한은 `profile`(이름·프로필 사진)뿐입니다. 이메일은 받지 않습니다.
 6. 동의 화면이 "테스트" 상태이면 **테스트 사용자로 등록한 계정만** 로그인할 수 있습니다. 둘 중 하나라도 비어 있으면 구글 버튼만 나오지 않습니다.
 
+### AI 도우미 (Google Gemini, 무료 등급)
+1. [Google AI Studio](https://aistudio.google.com)에서 **Get API key**로 키를 받습니다.
+2. `application-local.yml`의 `gemini.api-key`에 넣고 앱을 다시 시작합니다. (운영: 환경변수 `GEMINI_API_KEY`, 모델을 바꾸려면 `GEMINI_MODEL`, 기본 `gemini-3.5-flash-lite`)
+3. 키가 비어 있으면 도우미 버튼이 나오지 않습니다.
+4. 무료 등급은 입력 내용이 구글 서비스 개선에 쓰일 수 있어서, 회원 닉네임·아이디는 보내지 않고 화면에 "개인정보는 적지 마세요" 안내를 띄웁니다. 무료 한도는 AI Studio의 사용량 화면에서 확인하세요.
+
 ### 기상청 (API허브)
 1. [기상청 API허브](https://apihub.kma.go.kr)에 가입해서 인증키(authKey)를 발급받습니다.
 2. **예특보 → 단기예보 → 동네예보(초단기실황·초단기예보·단기예보) 조회**에서 기능마다 따로 활용신청을 해야 합니다.
@@ -194,6 +200,7 @@ nadeuri
 | WS | `/ws/gatherings/{id}/chat` | 채팅 WebSocket. 보내기 `{"content":"..."}`, 받기 `{"type":"message","message":{...}}` / `{"type":"error","message":"..."}` 🔒 |
 | GET | `/api/weather/forecast?lat=&lng=` | 날짜별·시간별 예보 JSON (모임 시간 고르기용) |
 | GET | `/api/gatherings?lat=&lng=&radius=` | 끝나지 않은 주변 모임 JSON (반경 100~20,000m, 좌표가 범위를 벗어나면 400). `endAt`, `status`(RECRUITING·FULL·ONGOING·ENDED), `statusLabel` 포함 |
+| POST | `/api/assistant/chat` | AI 도우미 질문 (`{"messages":[{"role":"user","text":"..."}],"lat":..,"lng":..}` → `{"reply":"..."}`). 로그인 필요(아니면 401), 1분 6번·하루 100번(넘으면 429), Gemini 키가 없거나 오류면 503 🔒 |
 | GET | `/api/weather?lat=&lng=` | 지금 날씨 JSON (기온·습도·1시간 강수량은 초단기실황 관측값, 하늘상태·강수확률은 예보. `observed`, `observedAt` 포함) |
 
 🔒 표시는 로그인이 필요합니다. 로그인하지 않았으면 `/login`으로 이동합니다. POST 요청에는 CSRF 토큰이 필요하고, Thymeleaf의 `th:action`이 토큰을 자동으로 넣어 줍니다.

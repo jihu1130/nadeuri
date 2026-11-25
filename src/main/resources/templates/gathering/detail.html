@@ -8,6 +8,7 @@
   <meta property="og:title" th:content="${g.title}">
   <meta property="og:description" th:content="${g.placeName + ' · ' + #temporals.format(g.startAt, 'M/d HH:mm')}">
   <link rel="stylesheet" th:href="@{/css/app.css}">
+  <link rel="stylesheet" th:href="@{/css/assistant.css}">
 </head>
 <body class="form-page detail-page">
 <header class="topbar">
@@ -133,5 +134,7 @@
 <script th:src="@{//dapi.kakao.com/v2/maps/sdk.js(appkey=${kakaoJsKey},autoload=false)}"></script>
 <script th:src="@{/js/gathering-detail.js}"></script>
 <script th:src="@{/js/confirm.js}"></script>
+<div th:replace="~{fragments/assistant :: widget}"></div>
+<script th:src="@{/js/assistant.js}"></script>
 </body>
 </html>

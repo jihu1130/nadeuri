@@ -25,6 +25,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
@@ -77,6 +79,7 @@ public class SecurityConfig {
                                 antMatcher("/css/**"),
                                 antMatcher("/js/**"),
                                 antMatcher("/images/**"),
+                                antMatcher(HttpMethod.GET, "/uploads/profile/**"), // 회원 프로필 사진 (참여자 목록에서 누구나 봄)
                                 antMatcher("/favicon.ico"),
                                 antMatcher("/login"),
                                 antMatcher("/signup"),
@@ -90,7 +93,10 @@ public class SecurityConfig {
                 // 로그인 후 돌아갈 곳은 사람이 보는 화면 주소만 기억한다
                 .requestCache(cache -> cache.requestCache(REQUEST_CACHE))
                 // 로그인이 필요한 곳에 들어오면 우리 로그인 화면으로 보낸다
-                .exceptionHandling(e -> e.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/login")))
+                // JSON API(/api/**)는 로그인 화면으로 보내지 않고 401만 돌려준다 (화면의 fetch가 안내 문구를 띄움)
+                .exceptionHandling(e -> e
+                        .defaultAuthenticationEntryPointFor(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), antMatcher("/api/**"))
+                        .defaultAuthenticationEntryPointFor(new LoginUrlAuthenticationEntryPoint("/login"), antMatcher("/**")))
                 // 우리 사이트 로그인: login.html 폼이 username, password를 POST /login 으로 보낸다
                 .formLogin(form -> form
                         .loginPage("/login")
