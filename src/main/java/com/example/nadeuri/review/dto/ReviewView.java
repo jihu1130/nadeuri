@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 /** 모임 상세의 후기 한 줄 (후기 + 쓴 사람 닉네임·사진) */
 public record ReviewView(
         Long userId,
+        /** 회원 공개 UUID (프로필 주소 /users/{publicId}) */
+        String publicId,
         String nickname,
         String profileImageUrl,
         int rating,

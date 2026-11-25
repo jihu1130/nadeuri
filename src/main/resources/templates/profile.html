@@ -75,6 +75,35 @@
       </div>
     </div>
     <p class="field-help">모임이 끝나면 함께한 사람끼리 별점·후기와 "다음에 또 만나요"를 남길 수 있어요. 참여자 목록에서 닉네임 아래에 보여요.</p>
+    <a class="btn secondary btn-block" th:href="@{/users/{id}(id=${me.publicId})}">내 프로필 보기 (다른 사람에게 보이는 모습)</a>
+  </section>
+
+  <!--/* 활동 기록 공개 범위: 내 프로필(/users/{id})의 "연 모임", "참여한 모임"을 누구에게 보여 줄지 */-->
+  <section class="card profile-section" aria-labelledby="visibilityTitle">
+    <h2 id="visibilityTitle">활동 기록 공개 범위</h2>
+    <p class="field-help">닉네임·사진·자기소개·평판은 누구나 볼 수 있어요. 아래 활동 기록은 항목마다 공개 범위를 고를 수 있어요.</p>
+    <form method="post" th:action="@{/me/profile/visibility}" class="visibility-form">
+      <fieldset class="visibility-field">
+        <legend>내가 연 모임</legend>
+        <div class="segmented">
+          <th:block th:each="v : ${visibilities}">
+            <input type="radio" name="hosted" th:id="${'hosted-' + v.name()}" th:value="${v.name()}" th:checked="${me.hostedVisibility == v}">
+            <label th:for="${'hosted-' + v.name()}" th:text="${v.label}">누구나</label>
+          </th:block>
+        </div>
+      </fieldset>
+      <fieldset class="visibility-field">
+        <legend>내가 참여한 모임 <span class="label-optional">(끝난 모임만)</span></legend>
+        <div class="segmented">
+          <th:block th:each="v : ${visibilities}">
+            <input type="radio" name="joined" th:id="${'joined-' + v.name()}" th:value="${v.name()}" th:checked="${me.joinedVisibility == v}">
+            <label th:for="${'joined-' + v.name()}" th:text="${v.label}">누구나</label>
+          </th:block>
+        </div>
+      </fieldset>
+      <p class="field-help">"함께한 사람만"은 나와 같은 모임에 참여한 적 있는 사람에게만 보여요. 앞으로 참여할 모임은 공개 범위와 상관없이 다른 사람에게 보이지 않아요.</p>
+      <button class="btn form-submit" type="submit">공개 범위 저장</button>
+    </form>
   </section>
 
   <!--/* 아이디로 가입한 회원만: 카카오·구글 회원은 비밀번호가 없다 */-->

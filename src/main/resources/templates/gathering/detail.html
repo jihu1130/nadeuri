@@ -52,7 +52,7 @@
         <img th:if="${p.profileImageUrl}" th:src="${p.profileImageUrl}" class="participant-avatar" alt="" referrerpolicy="no-referrer">
         <span th:unless="${p.profileImageUrl}" class="participant-avatar initial" aria-hidden="true" th:text="${p.initial()}">나</span>
         <span class="participant-text">
-          <span class="participant-name" th:text="${p.nickname}">닉네임</span>
+          <a class="participant-name" th:href="@{/users/{id}(id=${p.publicId})}" th:text="${p.nickname}">닉네임</a>
           <span class="participant-bio" th:if="${p.bio}" th:text="${p.bio}" th:title="${p.bio}">자기소개</span>
           <!--/* 평판: 받은 "또 만나요" 수, 모임장으로 받은 별점 평균 */-->
           <th:block th:with="rep=${reputations.get(p.userId)}">
@@ -120,7 +120,7 @@
         <span th:unless="${r.profileImageUrl}" class="participant-avatar initial" aria-hidden="true" th:text="${r.initial()}">나</span>
         <div class="review-body">
           <div class="review-head">
-            <b th:text="${r.nickname}">닉네임</b>
+            <a class="review-author" th:href="@{/users/{id}(id=${r.publicId})}" th:text="${r.nickname}">닉네임</a>
             <span class="review-stars" th:text="${r.stars()}" th:attr="aria-label=${'별점 ' + r.rating + '점'}">★★★★★</span>
             <time th:text="${#temporals.format(r.updatedAt, 'M월 d일')}">11월 25일</time>
           </div>

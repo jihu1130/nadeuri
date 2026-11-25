@@ -3,6 +3,7 @@ package com.example.nadeuri.user.controller;
 import com.example.nadeuri.global.security.LoginUser;
 import com.example.nadeuri.review.service.ReviewService;
 import com.example.nadeuri.user.domain.User;
+import com.example.nadeuri.user.domain.Visibility;
 import com.example.nadeuri.user.dto.PasswordChangeRequest;
 import com.example.nadeuri.user.dto.ProfileUpdateRequest;
 import com.example.nadeuri.user.service.ProfileImageStorage;
@@ -84,6 +85,16 @@ public class ProfileController {
         return "redirect:/me/profile";
     }
 
+    /** 활동 기록 공개 범위 (프로필 화면의 "연 모임", "참여한 모임") */
+    @PostMapping("/me/profile/visibility")
+    public String changeVisibility(@AuthenticationPrincipal LoginUser user,
+                                   @RequestParam("hosted") Visibility hosted, @RequestParam("joined") Visibility joined,
+                                   RedirectAttributes ra) {
+        userService.changeVisibility(user.getId(), hosted, joined);
+        ra.addFlashAttribute("message", "활동 기록 공개 범위를 저장했어요.");
+        return "redirect:/me/profile";
+    }
+
     @PostMapping("/me/password")
     public String changePassword(@AuthenticationPrincipal LoginUser user, @Valid @ModelAttribute PasswordChangeRequest req,
                                  BindingResult binding, Model model, RedirectAttributes ra) {
@@ -120,6 +131,7 @@ public class ProfileController {
         model.addAttribute("bioMax", User.BIO_MAX);
         model.addAttribute("photoMaxBytes", ProfileImageStorage.MAX_BYTES);
         model.addAttribute("reputation", reviewService.reputation(me.getId()));
+        model.addAttribute("visibilities", Visibility.values());
         if (profileErrors != null) model.addAttribute("profileErrors", profileErrors);
         if (passwordErrors != null) model.addAttribute("passwordErrors", passwordErrors);
         return "profile";

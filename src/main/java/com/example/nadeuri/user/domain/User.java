@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -63,6 +65,18 @@ public class User {
     @Column(name = "photo_customized", nullable = false)
     private boolean photoCustomized;
 
+    /** 프로필의 "내가 연 모임"을 누구에게 보여 줄지 (V13) */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "hosted_visibility", nullable = false, length = 20)
+    private Visibility hostedVisibility = Visibility.PUBLIC;
+
+    /** 프로필의 "참여한 모임"(끝난 것만)을 누구에게 보여 줄지 (V13) */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(name = "joined_visibility", nullable = false, length = 20)
+    private Visibility joinedVisibility = Visibility.MEMBERS;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime lastLoginAt;
@@ -120,6 +134,12 @@ public class User {
     public void changePassword(String passwordHash) {
         if (!isLocal()) throw new IllegalStateException("카카오·구글 회원은 비밀번호가 없어요.");
         this.password = passwordHash;
+    }
+
+    /** 프로필 설정: 활동 기록 공개 범위 */
+    public void changeVisibility(Visibility hosted, Visibility joined) {
+        this.hostedVisibility = hosted;
+        this.joinedVisibility = joined;
     }
 
     public void markLoggedIn() {

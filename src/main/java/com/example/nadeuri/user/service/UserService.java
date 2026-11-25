@@ -3,6 +3,7 @@ package com.example.nadeuri.user.service;
 import com.example.nadeuri.gathering.service.GatheringService;
 import com.example.nadeuri.review.service.ReviewService;
 import com.example.nadeuri.user.domain.User;
+import com.example.nadeuri.user.domain.Visibility;
 import com.example.nadeuri.user.dto.SocialProfile;
 import com.example.nadeuri.user.dto.PasswordChangeRequest;
 import com.example.nadeuri.user.dto.ProfileUpdateRequest;
@@ -81,6 +82,12 @@ public class UserService {
         rememberMeTokens.removeAll(userId);
         repository.delete(user);
         profileImageStorage.deleteIfOwned(user.getProfileImageUrl());
+    }
+
+    /** 프로필 설정: 활동 기록 공개 범위 (연 모임, 참여한 모임) */
+    @Transactional
+    public void changeVisibility(Long userId, Visibility hosted, Visibility joined) {
+        get(userId).changeVisibility(hosted, joined);
     }
 
     /** 프로필 설정: 닉네임·자기소개 (앞뒤 공백은 지운다) */

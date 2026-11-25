@@ -89,6 +89,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 antMatcher(HttpMethod.GET, "/"),
                                 antMatcher(HttpMethod.GET, "/gatherings/*"),
+                                antMatcher(HttpMethod.GET, "/users/*"),       // 회원 프로필 (공개 범위는 화면에서 거른다)
                                 antMatcher(HttpMethod.GET, "/api/**"),
                                 antMatcher("/css/**"),
                                 antMatcher("/js/**"),

@@ -199,6 +199,8 @@ nadeuri
 | POST | `/gatherings/{id}/review` | 끝난 모임 후기 쓰기·고치기 (`rating` 1~5, `content` 200자). 참여자만, 끝나고 14일 안 🔒 |
 | POST | `/gatherings/{id}/review/delete` | 내 후기 지우기 🔒 |
 | POST | `/gatherings/{id}/meet-again` | 함께한 사람에게 "다음에 또 만나요" 보내기·거두기 (`to` = 회원 공개 UUID) 🔒 |
+| GET | `/users/{회원 UUID}` | 회원 프로필: 자기소개·평판, 연 모임·참여한 끝난 모임(본인이 고른 공개 범위대로) |
+| POST | `/me/profile/visibility` | 활동 기록 공개 범위 (`hosted`, `joined` = PUBLIC·MEMBERS·PRIVATE) 🔒 |
 | GET | `/gatherings/{id}/chat` | 모임 채팅 화면 (참여자만) 🔒 |
 | GET | `/api/gatherings/{id}/messages` | 지난 채팅 메시지 JSON (최근 50개, `?before=id` 더 이전, `?after=id` 그 뒤). 참여자가 아니면 403 |
 | WS | `/ws/gatherings/{id}/chat` | 채팅 WebSocket. 보내기 `{"content":"..."}`, 받기 `{"type":"message","message":{...}}` / `{"type":"error","message":"..."}`. 내 메시지 삭제 `{"type":"delete","id":N}` → 모두에게 `{"type":"deleted","id":N}`, 수정 `{"type":"edit","id":N,"content":"..."}` → `{"type":"edited","message":{...}}` 🔒 |
@@ -249,7 +251,7 @@ nadeuri
 - [x] 별명(닉네임) 변경
 - [x] 프로필 설정
 - [x] 끝난 모임 리뷰·별점 → 프로필에 평판 표시
-- [ ] 지금까지의 활동 기록을 프로필에 표시 (어디까지 공개할지 본인이 선택)
+- [x] 지금까지의 활동 기록을 프로필에 표시 (어디까지 공개할지 본인이 선택)
 - [ ] 친구 추가
 
 **날씨**

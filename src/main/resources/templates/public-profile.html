@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${pp.user.nickname} + ' - 나들이'">프로필 - 나들이</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <link rel="stylesheet" th:href="@{/css/assistant.css}">
+</head>
+<body class="form-page mine-page">
+<header class="topbar">
+  <a href="/" class="logo"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 10.2c0 5.1-7 11-7 11s-7-5.9-7-11a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></span><span>나들이</span></a>
+  <div th:replace="~{fragments/auth :: auth}"></div>
+</header>
+
+<!--/* 회원 프로필: 자기소개·평판은 누구나, 활동 기록은 그 회원이 고른 공개 범위대로 (PublicProfileService) */-->
+<div class="container" th:with="u=${pp.user}">
+  <!--/* 내 프로필을 내가 볼 때: 다른 사람에게 어떻게 보이는지 안내 */-->
+  <div class="flash" th:if="${pp.self}">
+    내 프로필이에요. 활동 기록 옆의 표시가 다른 사람에게 보이는 범위예요.
+    <a th:href="@{/me/profile}">공개 범위 바꾸기</a>
+  </div>
+
+  <section class="card public-profile-head">
+    <img th:if="${u.profileImageUrl}" th:src="${u.profileImageUrl}" class="public-profile-avatar" alt="" referrerpolicy="no-referrer">
+    <span th:unless="${u.profileImageUrl}" class="public-profile-avatar initial" aria-hidden="true" th:text="${pp.initial()}">나</span>
+    <div class="public-profile-copy">
+      <h1 th:text="${u.nickname}">닉네임</h1>
+      <p th:if="${u.bio}" th:text="${u.bio}">자기소개</p>
+      <p th:unless="${u.bio}" class="muted">아직 자기소개가 없어요.</p>
+    </div>
+  </section>
+
+  <section class="card profile-section" aria-labelledby="repTitle">
+    <h2 id="repTitle">평판</h2>
+    <div class="rep-stats">
+      <div class="rep-stat">
+        <span class="rep-stat-value" th:text="${'👋 ' + pp.reputation.meetAgain}">👋 0</span>
+        <span class="rep-stat-label">받은 "다음에 또 만나요"</span>
+      </div>
+      <div class="rep-stat">
+        <span class="rep-stat-value" th:text="${pp.reputation.hostReviews > 0} ? ${'★ ' + pp.reputation.hostRatingLabel()} : '★ -'">★ -</span>
+        <span class="rep-stat-label" th:text="${pp.reputation.hostReviews > 0} ? ${'연 모임 별점 (후기 ' + pp.reputation.hostReviews + '개)'} : '연 모임 별점 (아직 없음)'">연 모임 별점</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card mine-section" aria-labelledby="hostedTitle">
+    <div class="mine-section-head">
+      <h2 id="hostedTitle">연 모임
+        <span class="mine-count" th:if="${pp.hostedVisible}" th:text="${pp.hostedCount + '개'}">0개</span>
+      </h2>
+      <span class="visibility-chip" th:if="${pp.self}" th:text="${'🔒 ' + u.hostedVisibility.label}">누구나</span>
+    </div>
+    <th:block th:if="${pp.hostedVisible}">
+      <p class="mine-empty" th:if="${pp.hostedUpcoming.isEmpty() and pp.hostedPast.isEmpty()}">아직 연 모임이 없어요.</p>
+      <div class="mine-list" th:unless="${pp.hostedUpcoming.isEmpty()}">
+        <th:block th:each="g : ${pp.hostedUpcoming}"><a th:replace="~{fragments/gathering-row :: row(${g}, false)}"></a></th:block>
+      </div>
+      <details class="mine-past" th:unless="${pp.hostedPast.isEmpty()}">
+        <summary th:text="${'끝난 모임 ' + pp.hostedPast.size() + '개'}">끝난 모임</summary>
+        <div class="mine-list">
+          <th:block th:each="g : ${pp.hostedPast}"><a th:replace="~{fragments/gathering-row :: row(${g}, true)}"></a></th:block>
+        </div>
+      </details>
+    </th:block>
+    <p class="mine-empty profile-hidden" th:unless="${pp.hostedVisible}"
+       th:text="${u.hostedVisibility.name() == 'MEMBERS'} ? '함께 모임에 참여한 사람에게만 보여요.' : '공개하지 않은 기록이에요.'">공개하지 않은 기록이에요.</p>
+  </section>
+
+  <section class="card mine-section" aria-labelledby="joinedTitle">
+    <div class="mine-section-head">
+      <h2 id="joinedTitle">참여한 모임
+        <span class="mine-count" th:if="${pp.joinedVisible}" th:text="${pp.joinedCount + '개'}">0개</span>
+      </h2>
+      <span class="visibility-chip" th:if="${pp.self}" th:text="${'🔒 ' + u.joinedVisibility.label}">함께한 사람만</span>
+    </div>
+    <th:block th:if="${pp.joinedVisible}">
+      <p class="mine-empty" th:if="${pp.joinedPast.isEmpty()}">아직 참여한 끝난 모임이 없어요.</p>
+      <div class="mine-list" th:unless="${pp.joinedPast.isEmpty()}">
+        <th:block th:each="g : ${pp.joinedPast}"><a th:replace="~{fragments/gathering-row :: row(${g}, true)}"></a></th:block>
+      </div>
+      <p class="field-help">끝난 모임만 보여요. 앞으로 참여할 모임은 보이지 않아요.</p>
+    </th:block>
+    <p class="mine-empty profile-hidden" th:unless="${pp.joinedVisible}"
+       th:text="${u.joinedVisibility.name() == 'MEMBERS'} ? '함께 모임에 참여한 사람에게만 보여요.' : '공개하지 않은 기록이에요.'">공개하지 않은 기록이에요.</p>
+  </section>
+</div>
+<div th:replace="~{fragments/assistant :: widget}"></div>
+<script th:src="@{/js/assistant.js}"></script>
+</body>
+</html>

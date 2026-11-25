@@ -614,3 +614,35 @@ button.link-btn { font: inherit; cursor: pointer; }
 .rep-stat-label { color: var(--muted); font-size: 12px; }
 .review-card { scroll-margin-top: 84px; }   /* #reviews로 이동할 때 위쪽 고정 머리말에 가리지 않게 */
 .review-card .flash { margin: 0 0 12px; }
+
+/* ===== 회원 프로필 (/users/{id}) ===== */
+a.participant-name, .review-author { color: inherit; text-decoration: none; }
+a.participant-name:hover, .review-author:hover { text-decoration: underline; }
+.review-author { font-weight: 700; }
+.public-profile-head { display: flex; align-items: center; gap: 18px; }
+.public-profile-avatar { width: 76px; height: 76px; flex: none; border-radius: 50%; object-fit: cover; }
+.public-profile-avatar.initial { display: grid; place-items: center; background: var(--yellow-soft); color: #6b5512; font-size: 30px; font-weight: 800; }
+.public-profile-copy { display: grid; min-width: 0; gap: 4px; }
+.public-profile-copy h1 { margin: 0; font-size: 24px; overflow-wrap: anywhere; }
+.public-profile-copy p { margin: 0; color: #5e594d; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+.public-profile-copy p.muted { color: var(--muted); }
+.visibility-chip { flex: none; padding: 3px 9px; border-radius: 999px; background: #efeee9; color: #5b574b; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.profile-hidden { padding: 14px; border: 1px dashed #e0dbcd; border-radius: 10px; text-align: center; }
+
+/* 프로필 설정: 공개 범위 고르기 (라디오를 붙은 버튼 모양으로) */
+.visibility-form { display: grid; gap: 4px; }
+.visibility-field { margin: 10px 0 0; padding: 0; border: 0; }
+.visibility-field legend { margin-bottom: 7px; padding: 0; color: #454238; font-size: 13px; font-weight: 700; }
+.segmented { display: inline-grid; grid-auto-flow: column; overflow: hidden; border: 1px solid #dedbd2; border-radius: 10px; background: #fff; }
+.segmented input { position: absolute; width: 1px; height: 1px; min-height: 0; margin: 0; padding: 0; opacity: 0; }
+.segmented label { margin: 0; padding: 9px 14px; border-left: 1px solid #ece8de; color: #5e594d; font-size: 13px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+.segmented input:first-child + label { border-left: 0; }
+.segmented label:hover { background: var(--yellow-wash); }
+.segmented input:checked + label { background: var(--yellow); color: #30270f; font-weight: 750; }
+.segmented input:focus-visible + label { outline: 3px solid rgba(226, 177, 36, .45); outline-offset: -3px; }
+@media (max-width: 480px) {
+  .segmented { display: grid; width: 100%; grid-auto-flow: row; }
+  .segmented label { border-top: 1px solid #ece8de; border-left: 0; }
+  .segmented input:first-child + label { border-top: 0; }
+  .public-profile-head { align-items: flex-start; }
+}

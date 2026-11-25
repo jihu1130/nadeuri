@@ -18,7 +18,7 @@ public interface GatheringReviewRepository extends JpaRepository<GatheringReview
     /** 모임 후기 목록 (최근에 쓰거나 고친 것부터) */
     @Query("""
             SELECT new com.example.nadeuri.review.dto.ReviewView(
-                       u.id, u.nickname, u.profileImageUrl, r.rating, r.content, r.updatedAt)
+                       u.id, u.publicId, u.nickname, u.profileImageUrl, r.rating, r.content, r.updatedAt)
             FROM GatheringReview r JOIN User u ON u.id = r.userId
             WHERE r.gatheringId = :gatheringId
             ORDER BY r.updatedAt DESC, r.id DESC

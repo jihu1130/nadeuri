@@ -49,6 +49,13 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     /** 이 모임의 참여 기록 수 (주최자 포함) */
     long countByGatheringId(Long gatheringId);
 
+    /** 두 사람이 같은 모임에 함께 있었던 적이 있는지 (프로필의 "함께한 사람만" 공개 범위) */
+    @Query("""
+            SELECT COUNT(a) > 0 FROM Participant a, Participant b
+            WHERE a.gatheringId = b.gatheringId AND a.userId = :userA AND b.userId = :userB
+            """)
+    boolean metBefore(@Param("userA") Long userA, @Param("userB") Long userB);
+
     /**
      * 모임장 넘기기 1단계: 지금 모임장을 일반 참여자로 바꾼다.
      * @return 1이면 성공, 0이면 이 사람이 (더 이상) 모임장이 아님
