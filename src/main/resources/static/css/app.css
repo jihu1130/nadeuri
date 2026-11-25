@@ -194,6 +194,8 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 .login-card input { border-color: #dedbd2; }
 .login-card form > .btn { width: 100%; margin-top: 18px !important; }
 .login-card > p.meta[style] { margin: 15px 0 0 !important; }
+.login-card .remember-me { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; color: #5f5a4c; font-size: 13px; font-weight: 500; cursor: pointer; }
+.login-card .remember-me input { width: 16px; height: 16px; min-height: 0; flex: none; margin: 0; padding: 0; accent-color: #d9a821; cursor: pointer; }
 .login-card .link-btn { padding: 0 2px; color: #947318; }
 .divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 14px; color: #969184; font-size: 11px; }
 .divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--line); }

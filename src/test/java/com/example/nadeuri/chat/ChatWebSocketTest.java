@@ -160,6 +160,88 @@ class ChatWebSocketTest {
     }
 
     @Test
+    void 일초에_다섯_개를_넘게_보내면_보낸_사람에게만_막혔다고_알리고_저장하지_않는다() throws Exception {
+        User host = user("주최");
+        User a = user("도배러");
+        Gathering g = gathering(host);
+        gatherings.join(g.getId(), a.getId());
+
+        Inbox hostInbox = new Inbox(), aInbox = new Inbox();
+        WebSocketSession hostWs = connect(g.getPublicId(), sessionCookie(host), base(), hostInbox);
+        WebSocketSession aWs = connect(g.getPublicId(), sessionCookie(a), base(), aInbox);
+        for (int i = 0; i < 50 && handler.connectionCount(g.getId()) < 2; i++) Thread.sleep(20);
+
+        for (int i = 1; i <= 6; i++) {
+            aWs.sendMessage(new TextMessage("{\"content\":\"도배 " + i + "\"}"));
+        }
+
+        int delivered = 0;
+        JsonNode limited = null;
+        for (int i = 0; i < 6; i++) {
+            JsonNode body = json.readTree(aInbox.messages.poll(5, TimeUnit.SECONDS));
+            if (body.path("type").asText().equals("message")) delivered++;
+            if (body.path("type").asText().equals("rate_limited")) limited = body;
+        }
+        assertThat(delivered).isEqualTo(5);
+        assertThat(limited).as("6번째는 막힘").isNotNull();
+        assertThat(limited.path("content").asText()).isEqualTo("도배 6");
+        assertThat(limited.path("retryAfterMs").asLong()).isBetween(1L, 3000L);
+        assertThat(limited.path("message").asText()).contains("초 뒤에");
+
+        // 주최자는 저장된 5개만 받고 "막힘" 알림은 받지 않는다
+        for (int i = 0; i < 5; i++) {
+            assertThat(hostInbox.messages.poll(5, TimeUnit.SECONDS)).contains("\"type\":\"message\"");
+        }
+        assertThat(hostInbox.messages.poll(300, TimeUnit.MILLISECONDS)).isNull();
+
+        // 막힌 동안 보낸 글도 막힌다
+        aWs.sendMessage(new TextMessage("{\"content\":\"또\"}"));
+        assertThat(json.readTree(aInbox.messages.poll(5, TimeUnit.SECONDS)).path("type").asText()).isEqualTo("rate_limited");
+
+        hostWs.close();
+        aWs.close();
+    }
+
+    @Test
+    void 입력_중_신호는_같은_방의_다른_사람에게만_간다() throws Exception {
+        User host = user("주최");
+        User a = user("타자왕");
+        Gathering g = gathering(host);
+        gatherings.join(g.getId(), a.getId());
+
+        Inbox hostInbox = new Inbox(), aInbox = new Inbox();
+        WebSocketSession hostWs = connect(g.getPublicId(), sessionCookie(host), base(), hostInbox);
+        WebSocketSession aWs = connect(g.getPublicId(), sessionCookie(a), base(), aInbox);
+        for (int i = 0; i < 50 && handler.connectionCount(g.getId()) < 2; i++) Thread.sleep(20);
+
+        aWs.sendMessage(new TextMessage("{\"type\":\"typing\",\"typing\":true}"));
+        JsonNode typing = json.readTree(hostInbox.messages.poll(5, TimeUnit.SECONDS));
+        assertThat(typing.path("type").asText()).isEqualTo("typing");
+        assertThat(typing.path("typing").asBoolean()).isTrue();
+        assertThat(typing.path("user").path("nickname").asText()).isEqualTo("타자왕");
+        assertThat(typing.path("user").path("userId").asText()).isEqualTo(a.getPublicId());
+        assertThat(aInbox.messages.poll(300, TimeUnit.MILLISECONDS)).as("보낸 사람에게는 안 감").isNull();
+
+        // 바로 이어서 온 "입력 중"은 무시, "멈춤"은 바로 전달
+        aWs.sendMessage(new TextMessage("{\"type\":\"typing\",\"typing\":true}"));
+        aWs.sendMessage(new TextMessage("{\"type\":\"typing\",\"typing\":false}"));
+        JsonNode stop = json.readTree(hostInbox.messages.poll(5, TimeUnit.SECONDS));
+        assertThat(stop.path("typing").asBoolean()).isFalse();
+        assertThat(hostInbox.messages.poll(300, TimeUnit.MILLISECONDS)).isNull();
+
+        // 입력 중 신호는 메시지로 저장되지 않고, 전송 제한 횟수에도 들어가지 않는다
+        for (int i = 1; i <= 5; i++) {
+            aWs.sendMessage(new TextMessage("{\"content\":\"글 " + i + "\"}"));
+        }
+        for (int i = 0; i < 5; i++) {
+            assertThat(aInbox.messages.poll(5, TimeUnit.SECONDS)).contains("\"type\":\"message\"");
+        }
+
+        hostWs.close();
+        aWs.close();
+    }
+
+    @Test
     void 참여자가_아니면_연결이_바로_끊긴다() throws Exception {
         Gathering g = gathering(user("주최"));
         User outsider = user("구경꾼");

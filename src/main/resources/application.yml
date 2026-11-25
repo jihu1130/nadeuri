@@ -1,5 +1,15 @@
 server:
   port: 8888
+  # 로그인은 세션 방식 (브라우저는 JSESSIONID 쿠키만 가진다)
+  servlet:
+    session:
+      # 아무 요청 없이 30분이 지나면 로그아웃 ("로그인 상태 유지"를 고른 사람은 쿠키로 다시 로그인됨)
+      timeout: 30m
+      cookie:
+        http-only: true    # 페이지 스크립트가 세션 쿠키를 읽지 못하게
+        same-site: lax     # 다른 사이트에서 보낸 POST에는 쿠키를 싣지 않게
+        # 운영(https)에서는 SERVER_SERVLET_SESSION_COOKIE_SECURE=true 로 https에서만 보내게 한다
+      tracking-modes: cookie   # 주소 뒤에 ;jsessionid=... 가 붙지 않게
 
 spring:
   application:

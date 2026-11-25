@@ -24,6 +24,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final GatheringService gatheringService;
     private final ProfileImageStorage profileImageStorage;
+    private final RememberMeTokenStore rememberMeTokens;
 
     /** 소셜 로그인(카카오, 구글) 성공 시: 처음이면 가입, 이미 있으면 프로필만 갱신 */
     @Transactional
@@ -74,6 +75,7 @@ public class UserService {
             throw new IllegalArgumentException("비밀번호가 맞지 않아요.");
         }
         gatheringService.removeAllFor(userId);
+        rememberMeTokens.removeAll(userId);
         repository.delete(user);
         profileImageStorage.deleteIfOwned(user.getProfileImageUrl());
     }
@@ -110,7 +112,7 @@ public class UserService {
     }
 
     /**
-     * 비밀번호 바꾸기 (아이디 회원만).
+     * 비밀번호 바꾸기 (아이디 회원만). 모든 기기의 "로그인 상태 유지"도 함께 끊긴다.
      * @throws IllegalArgumentException 지금 비밀번호가 틀림, 새 비밀번호 두 칸이 다름, 지금과 같은 비밀번호
      * @throws IllegalStateException    카카오·구글 회원
      */
@@ -130,6 +132,8 @@ public class UserService {
             throw new IllegalArgumentException("지금과 다른 비밀번호로 정해 주세요.");
         }
         user.changePassword(passwordEncoder.encode(req.newPassword()));
+        // 다른 기기에 남은 "로그인 상태 유지"도 끊는다 (비밀번호를 바꾸는 흔한 이유가 계정 도용 걱정이라서)
+        rememberMeTokens.removeAll(userId);
     }
 
     @Transactional

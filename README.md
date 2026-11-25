@@ -21,7 +21,7 @@
 |---|---|
 | 언어 / 프레임워크 | Java 21, Spring Boot 3.3.5 (Web, Data JPA, Validation, Cache) |
 | 화면 | Thymeleaf, 순수 JavaScript, CSS |
-| 로그인 | Spring Security (아이디 폼 로그인, 비밀번호 BCrypt 해시) + OAuth2 Client (카카오·구글 로그인) |
+| 로그인 | Spring Security 세션 로그인 (아이디 폼 로그인, 비밀번호 BCrypt 해시, "로그인 상태 유지" 14일 — DB 토큰) + OAuth2 Client (카카오·구글 로그인) |
 | 지도 | 카카오맵 JavaScript SDK (지도, 장소 검색, 주소 변환) |
 | 날씨 | 기상청 API허브의 동네예보 조회서비스 `VilageFcstInfoService_2.0/getVilageFcst` |
 | DB | MySQL 8 (운영·로컬), H2 (테스트) |
@@ -129,6 +129,7 @@ google:
 | `KAKAO_JS_KEY` | 카카오 JavaScript 키 |
 | `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET` | 카카오 로그인용 키 (운영 도메인의 리다이렉트 URI도 따로 등록해야 합니다) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | 구글 로그인용 키 (운영 도메인의 리다이렉트 URI를 Google Cloud Console에 따로 등록해야 합니다. 운영은 HTTPS 필요) |
+| `SERVER_SERVLET_SESSION_COOKIE_SECURE` | 운영(HTTPS)에서 `true`: 세션 쿠키를 HTTPS에서만 보냅니다 ("로그인 상태 유지" 쿠키는 HTTPS면 자동으로 그렇게 됩니다) |
 | `DDL_AUTO` | 기본값은 `validate`입니다. 테이블은 앱이 뜰 때 Flyway가 `db/migration` 의 SQL로 만들고 바꿉니다 |
 
 ## 프로젝트 구조
@@ -179,7 +180,7 @@ nadeuri
 |---|---|---|
 | GET | `/` | 홈 (지도 + 주변 모임) |
 | GET | `/login` | 로그인 화면 (아이디 로그인 폼, 카카오·구글 로그인 버튼) |
-| POST | `/login` | 아이디 로그인 (`username`, `password`. Spring Security가 처리) |
+| POST | `/login` | 아이디 로그인 (`username`, `password`, 선택 `remember-me`. Spring Security가 처리) |
 | GET | `/signup` | 회원가입 화면 |
 | POST | `/signup` | 회원가입 (`username`, `nickname`, `password`, `passwordConfirm`) |
 | GET | `/oauth2/authorization/kakao` | 카카오 로그인 시작 (Spring Security가 처리) |
@@ -231,11 +232,11 @@ nadeuri
 
 ### 앞으로 할 일 (2026-11-23 추가)
 **채팅**
-- [ ] 입력 중 표시 ("○○님이 입력 중…")
+- [x] 입력 중 표시 ("○○님이 입력 중…")
 - [ ] 보낸 메시지 전송 취소·삭제
 - [ ] 메시지 수정 (인스타그램처럼 "수정됨"을 누르면 수정 전 내용 확인)
 - [ ] 멘션 (`@닉네임`)
-- [ ] 너무 빠른 전송 제한 (1초에 5개 넘게 보내면 3초 동안 전송 불가)
+- [x] 너무 빠른 전송 제한 (1초에 5개 넘게 보내면 3초 동안 전송 불가)
 - [ ] 채팅방 설정: 글자 크기, 알림 켜기/끄기, 채팅방 나가기, 특정 사람 차단·무시
 - [ ] 채팅방 나가기 (채팅만 숨길지, 모임 참여 취소까지 할지 결정 필요)
 - [ ] 챗봇 (어떤 서비스를 쓸지, 무엇을 도와줄지 결정 필요)

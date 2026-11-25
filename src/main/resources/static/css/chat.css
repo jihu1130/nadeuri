@@ -36,6 +36,18 @@
 .chat-msg.is-mine .chat-line { flex-direction: row-reverse; }
 .chat-msg.is-mine .chat-bubble { border-color: var(--yellow); border-radius: 14px 4px 14px 14px; background: var(--yellow-soft); }
 
+/* "○○님이 입력 중…" — 입력칸 바로 위 한 줄, 점 세 개가 차례로 깜빡인다 */
+.chat-typing { display: flex; align-items: center; gap: 6px; margin: 0; padding: 5px 16px; overflow: hidden; background: var(--page); color: #7d7768; font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.chat-typing[hidden] { display: none; }
+.chat-typing-dots { display: inline-flex; flex: none; gap: 3px; }
+.chat-typing-dots i { width: 5px; height: 5px; border-radius: 50%; background: #b3ab93; animation: chat-typing 1.2s infinite ease-in-out; }
+.chat-typing-dots i:nth-child(2) { animation-delay: .15s; }
+.chat-typing-dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes chat-typing { 0%, 60%, 100% { opacity: .3; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { .chat-typing-dots i { animation: none; opacity: .7; } }
+/* 너무 빨리 보내서 잠시 막혔을 때 */
+.chat-form.is-limited textarea { border-color: #eed2cb; background: #fffaf8; }
+
 .chat-form { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: #fff; }
 .chat-form textarea { min-height: 44px; max-height: 140px; flex: 1; resize: none; line-height: 1.45; }
 .chat-form .btn { flex: none; min-height: 44px; }

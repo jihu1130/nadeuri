@@ -7,6 +7,10 @@ const ME = shell.dataset.me || null;              // 내 공개 UUID
  * 2) 새 메시지: WebSocket /ws/gatherings/{id}/chat 에 {"content": "..."} 를 보내고,
  *    서버가 같은 방 모두에게 {"type":"message","message":{...}} 를 보낸다.
  * 3) 연결이 끊기면 1·2·4·8…초(최대 30초) 뒤 다시 연결하고, 그사이 놓친 메시지를 ?after= 로 채운다.
+ * 4) 입력 중: 글을 쓰는 동안 2초마다 {"type":"typing","typing":true}, 다 지우거나 보내거나 3초 동안 멈추면 typing:false.
+ *    다른 사람의 typing은 마지막 신호 뒤 4초가 지나면 저절로 사라진다.
+ * 5) 도배 방지: 1초에 5개를 넘게 보내면 서버가 3초 동안 막고 {"type":"rate_limited"}를 보낸다.
+ *    막힌 글은 입력칸에 되돌려 놓고, 남은 초를 보여 주며 보내기 버튼을 잠근다.
  */
 const $ = id => document.getElementById(id);
 const log = $('chatLog'), list = $('chatList'), input = $('chatInput'), sendBtn = $('chatSend');
@@ -27,7 +31,117 @@ function setConn(text, state) {
   const el = $('chatConn');
   el.textContent = text;
   el.dataset.state = state;
-  sendBtn.disabled = state !== 'open' || !input.value.trim();
+  updateSendButton();
+}
+function isOpen() {
+  return socket && socket.readyState === WebSocket.OPEN;
+}
+function updateSendButton() {
+  sendBtn.disabled = !isOpen() || !input.value.trim() || Date.now() < blockedUntil;
+}
+
+/* ----- 도배 방지 (서버가 막으면 남은 초를 보여 주고 보내기를 잠근다) ----- */
+let blockedUntil = 0, blockTimer = null;
+
+function startBlock(ms, message) {
+  blockedUntil = Date.now() + ms;
+  $('chatForm').classList.add('is-limited');
+  clearInterval(blockTimer);
+  const tick = () => {
+    const left = Math.ceil((blockedUntil - Date.now()) / 1000);
+    if (left <= 0) {
+      clearInterval(blockTimer);
+      blockTimer = null;
+      $('chatForm').classList.remove('is-limited');
+      showError('');
+      updateSendButton();
+      return;
+    }
+    showError(`너무 빨리 보내고 있어요. ${left}초 뒤에 다시 보낼 수 있어요.`);
+    updateSendButton();
+  };
+  tick();
+  blockTimer = setInterval(tick, 250);
+}
+
+/* ----- 입력 중 표시 ----- */
+const TYPING_SEND_EVERY = 2000;   // 내가 쓰는 동안 이 간격으로 "입력 중"을 보낸다
+const TYPING_IDLE = 3000;         // 이만큼 안 치면 "멈춤"을 보낸다
+const TYPING_EXPIRE = 4000;       // 다른 사람의 "입력 중"은 마지막 신호 뒤 이만큼 지나면 지운다
+let typingSentAt = 0, typingIdleTimer = null, iAmTyping = false;
+const typists = new Map();        // 공개 UUID → { nickname, timer }
+
+function sendTyping(typing) {
+  if (!isOpen()) return;
+  socket.send(JSON.stringify({ type: 'typing', typing }));
+}
+function noteMyTyping() {
+  const hasText = !!input.value.trim();
+  clearTimeout(typingIdleTimer);
+  if (!hasText) {
+    stopMyTyping();
+    return;
+  }
+  const now = Date.now();
+  if (!iAmTyping || now - typingSentAt >= TYPING_SEND_EVERY) {
+    sendTyping(true);
+    iAmTyping = true;
+    typingSentAt = now;
+  }
+  typingIdleTimer = setTimeout(stopMyTyping, TYPING_IDLE);
+}
+function stopMyTyping() {
+  clearTimeout(typingIdleTimer);
+  if (iAmTyping) sendTyping(false);
+  iAmTyping = false;
+  typingSentAt = 0;
+}
+
+function onTyping(data) {
+  const u = data.user || {};
+  if (!u.userId || u.userId === ME) return;
+  const prev = typists.get(u.userId);
+  if (prev) clearTimeout(prev.timer);
+  if (data.typing) {
+    typists.set(u.userId, { nickname: u.nickname || '누군가', timer: setTimeout(() => removeTypist(u.userId), TYPING_EXPIRE) });
+  } else {
+    typists.delete(u.userId);
+  }
+  renderTyping();
+}
+function removeTypist(userId) {
+  const t = typists.get(userId);
+  if (!t) return;
+  clearTimeout(t.timer);
+  typists.delete(userId);
+  renderTyping();
+}
+function clearTypists() {
+  typists.forEach(t => clearTimeout(t.timer));
+  typists.clear();
+  renderTyping();
+}
+/** "가나님이 입력 중…", "가나님, 다라님이 입력 중…", "가나님 외 2명이 입력 중…" */
+function renderTyping() {
+  const el = $('chatTyping');
+  const names = [...typists.values()].map(t => t.nickname);
+  if (!names.length) {
+    el.hidden = true;
+    el.textContent = '';
+    return;
+  }
+  const label = names.length === 1 ? `${names[0]}님이 입력 중…`
+    : names.length === 2 ? `${names[0]}님, ${names[1]}님이 입력 중…`
+    : `${names[0]}님 외 ${names.length - 1}명이 입력 중…`;
+  const stick = nearBottom();
+  el.textContent = '';
+  const dots = document.createElement('span');
+  dots.className = 'chat-typing-dots';
+  dots.setAttribute('aria-hidden', 'true');
+  dots.append(document.createElement('i'), document.createElement('i'), document.createElement('i'));
+  el.append(dots, document.createTextNode(label));
+  el.hidden = false;
+  if (stick) scrollToBottom();   // 줄이 생기며 메시지 칸이 줄어도 맨 아래를 보던 사람은 계속 맨 아래
 }
 function showError(text) {
   const el = $('chatError');
@@ -180,12 +294,24 @@ function connect() {
     if (data.type === 'message') {
       const stick = nearBottom() || data.message.userId === ME;
       add([data.message], 'bottom');
+      removeTypist(data.message.userId);   // 보냈으면 더 이상 입력 중이 아님
       if (stick) scrollToBottom();
+    } else if (data.type === 'typing') {
+      onTyping(data);
+    } else if (data.type === 'rate_limited') {
+      // 막힌 글을 잃지 않게 입력칸이 비어 있으면 되돌려 놓는다
+      if (data.content && !input.value.trim()) {
+        input.value = data.content;
+        autosize();
+      }
+      startBlock(Number(data.retryAfterMs) || 3000, data.message);
     } else if (data.type === 'error') {
       showError(data.message);
     }
   });
   socket.addEventListener('close', async e => {
+    clearTypists();
+    iAmTyping = false;
     // 1008: 서버가 참여자가 아니라서 끊음(참여 취소·모임 삭제), 또는 로그아웃·세션 만료로 Tomcat이 끊음
     if (e.code === 1008) {
       stopForGood(STOPPED);
@@ -221,8 +347,10 @@ function stopForGood(message) {
 
 function send() {
   const text = input.value.trim();
-  if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
+  if (!text || !isOpen() || Date.now() < blockedUntil) return;
   socket.send(JSON.stringify({ content: text }));
+  iAmTyping = false;          // 서버가 메시지를 퍼뜨리면 다른 사람 화면에서 "입력 중"이 지워진다
+  clearTimeout(typingIdleTimer);
   input.value = '';
   autosize();
   sendBtn.disabled = true;
@@ -244,8 +372,12 @@ input.addEventListener('keydown', e => {
 });
 input.addEventListener('input', () => {
   autosize();
-  sendBtn.disabled = !(socket && socket.readyState === WebSocket.OPEN) || !input.value.trim();
+  updateSendButton();
+  noteMyTyping();
 });
+// 다른 곳을 누르거나 탭을 떠나면 "입력 중"을 멈춘다
+input.addEventListener('blur', stopMyTyping);
+window.addEventListener('pagehide', stopMyTyping);
 // 탭을 다시 보면 끊긴 연결을 바로 다시 시도
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && socket && socket.readyState === WebSocket.CLOSED && retryTimer && retry > 0) connect();

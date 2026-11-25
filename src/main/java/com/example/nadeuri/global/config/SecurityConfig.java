@@ -1,6 +1,8 @@
 package com.example.nadeuri.global.config;
 
 import com.example.nadeuri.global.security.LoginUser;
+import com.example.nadeuri.user.service.RememberMeTokenStore;
+import com.example.nadeuri.user.service.RememberMeUserDetailsService;
 import com.example.nadeuri.user.service.SocialOAuth2UserService;
 import com.example.nadeuri.user.service.LoginAttemptService;
 import com.example.nadeuri.user.service.UserService;
@@ -15,6 +17,10 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.rememberme.CookieTheftException;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenBasedRememberMeServices;
+import java.time.Duration;
+import java.util.UUID;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +56,11 @@ import static org.springframework.security.web.util.matcher.AntPathRequestMatche
  * - 둘러보기(홈, 모임 상세, 조회 API)는 누구나 가능
  * - 모임 만들기, 참여하기는 로그인 필요 (아이디 로그인, 카카오 로그인, 구글 로그인)
  *
+ * 로그인 방식: 세션 로그인. 로그인하면 서버 세션에 LoginUser를 두고, 브라우저는 JSESSIONID 쿠키만 가진다.
+ * - 아무것도 안 하고 30분이 지나면 세션이 끝난다 (application.yml server.servlet.session.timeout)
+ * - 아이디 로그인에서 "로그인 상태 유지"를 고르면 14일짜리 remember-me 쿠키를 주고,
+ *   세션이 끝나도 그 쿠키로 새 세션을 만든다. 쿠키 값은 DB(remember_me_token)와 대조하고 쓸 때마다 바뀐다.
+ *
  * 카카오·구글 키는 각각 비어 있으면 그 로그인 버튼만 꺼진 채로 앱이 뜬다.
  * (H2 콘솔이 켜지면 서블릿이 2개가 되어 문자열 매처가 모호해지므로 antMatcher를 쓴다)
  */
@@ -66,7 +77,10 @@ public class SecurityConfig {
                                                    ObjectProvider<ClientRegistrationRepository> clients,
                                                    SocialOAuth2UserService socialUserService,
                                                    UserService userService,
-                                                   LoginAttemptService loginAttempts) throws Exception {
+                                                   LoginAttemptService loginAttempts,
+                                                   RememberMeTokenStore rememberMeTokens,
+                                                   RememberMeUserDetailsService rememberMeUsers) throws Exception {
+        PersistentTokenBasedRememberMeServices rememberMe = rememberMeServices(rememberMeTokens, rememberMeUsers);
         http
                 .authorizeHttpRequests(auth -> auth
                         // "/gatherings/*" 보다 먼저 와야 함
@@ -105,7 +119,10 @@ public class SecurityConfig {
                         .passwordParameter("password")
                         .successHandler(localLoginSuccessHandler(userService, loginAttempts))
                         .failureHandler(localLoginFailureHandler(loginAttempts)))
-                .logout(logout -> logout.logoutSuccessUrl("/"))
+                // "로그인 상태 유지" (로그인 폼의 remember-me 체크박스)
+                .rememberMe(r -> r.rememberMeServices(rememberMe).key(REMEMBER_ME_KEY))
+                // 로그아웃: 세션을 끝내고 remember-me 쿠키와 DB 토큰도 지운다 (rememberMe 설정이 자동으로 붙여 줌)
+                .logout(logout -> logout.logoutSuccessUrl("/").deleteCookies("JSESSIONID"))
                 // H2 콘솔(h2 프로필 개발용)은 iframe과 자체 폼을 쓴다
                 .csrf(csrf -> csrf.ignoringRequestMatchers(antMatcher("/h2-console/**")))
                 .headers(h -> h.frameOptions(f -> f.sameOrigin()));
@@ -116,6 +133,40 @@ public class SecurityConfig {
                     .userInfoEndpoint(u -> u.userService(socialUserService)));
         }
         return http.build();
+    }
+
+    /** remember-me 쿠키 이름·파라미터 이름 (로그인 폼 체크박스 name과 같아야 함) */
+    public static final String REMEMBER_ME = "remember-me";
+    static final Duration REMEMBER_ME_VALIDITY = Duration.ofDays(14);
+    /**
+     * 자동 로그인 인증 객체를 이 앱이 만들었는지 확인하는 값. 토큰 자체는 DB와 대조하므로
+     * 서버를 재시작하며 바뀌어도 기존 쿠키는 계속 쓸 수 있다.
+     */
+    private static final String REMEMBER_ME_KEY = UUID.randomUUID().toString();
+
+    private static PersistentTokenBasedRememberMeServices rememberMeServices(RememberMeTokenStore tokens,
+                                                                             RememberMeUserDetailsService users) {
+        PersistentTokenBasedRememberMeServices services =
+                new PersistentTokenBasedRememberMeServices(REMEMBER_ME_KEY, users::loadById, tokens) {
+                    /**
+                     * 이미 쓴 예전 쿠키가 다시 오면(도용 의심) Spring이 그 회원의 토큰을 모두 지우고 쿠키도 지운 뒤
+                     * 예외를 던져 오류 화면이 뜬다. 여기서는 예외만 삼켜서, 로그인 안 된 상태로 계속 진행한다
+                     * (로그인이 필요한 화면이면 로그인 화면으로 간다).
+                     */
+                    @Override
+                    public Authentication autoLogin(HttpServletRequest request, HttpServletResponse response) {
+                        try {
+                            return super.autoLogin(request, response);
+                        } catch (CookieTheftException e) {
+                            logger.warn("로그인 상태 유지 쿠키 도용 의심: 그 회원의 자동 로그인을 모두 끊음");
+                            return null;
+                        }
+                    }
+                };
+        services.setParameter(REMEMBER_ME);
+        services.setCookieName(REMEMBER_ME);
+        services.setTokenValiditySeconds((int) REMEMBER_ME_VALIDITY.toSeconds());
+        return services;
     }
 
     /**

@@ -1,7 +1,9 @@
 package com.example.nadeuri.chat.websocket;
 
 import com.example.nadeuri.chat.dto.ChatMessageView;
+import com.example.nadeuri.chat.dto.ChatTypist;
 import com.example.nadeuri.chat.exception.NotParticipantException;
+import com.example.nadeuri.chat.service.ChatSendLimiter;
 import com.example.nadeuri.chat.service.ChatService;
 import com.example.nadeuri.global.security.LoginUser;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -17,6 +19,7 @@ import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorato
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -31,6 +34,11 @@ import java.util.regex.Pattern;
  *   <li>연결할 때 그 모임 참여자인지 확인하고, 아니면 바로 끊는다.</li>
  *   <li>받는 글: {"content": "..."} → 저장 후 같은 방 모두에게 {"type":"message","message":{...}}</li>
  *   <li>잘못된 글: 보낸 사람에게만 {"type":"error","message":"..."}</li>
+ *   <li>도배 방지: 1초에 5개를 넘게 보내면 3초 동안 막는다 → 보낸 사람에게만
+ *       {"type":"rate_limited","message":"...","retryAfterMs":2999,"content":"막힌 글"} (저장하지 않음)</li>
+ *   <li>입력 중: {"type":"typing","typing":true|false} → 저장하지 않고 같은 방의 다른 사람에게
+ *       {"type":"typing","typing":true,"user":{"userId":"공개 UUID","nickname":"..."}}.
+ *       한 연결에서 0.8초 안에 다시 온 "입력 중"은 무시한다.</li>
  * </ul>
  * 방 목록은 이 서버 메모리에만 있다 (서버가 여러 대가 되면 Redis 등으로 바꿔야 함).
  */
@@ -44,8 +52,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             "/ws/gatherings/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/chat/?$");
     private static final String GATHERING = "gatheringId";
     private static final String USER = "userId";
+    private static final String TYPIST = "typist";
+    private static final String LAST_TYPING = "lastTypingAt";
+    /** 같은 연결의 "입력 중" 신호는 이 간격보다 자주 퍼뜨리지 않는다 (멈춤 신호 typing:false는 항상 보냄) */
+    static final long TYPING_MIN_INTERVAL_MS = 800;
 
     private final ChatService chatService;
+    private final ChatSendLimiter sendLimiter;
     private final ObjectMapper objectMapper;
 
     /** 모임 id → 그 방에 연결된 세션들 */
@@ -64,6 +77,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         WebSocketSession session = new ConcurrentWebSocketSessionDecorator(raw, 5_000, 64 * 1024);
         session.getAttributes().put(GATHERING, gatheringId);
         session.getAttributes().put(USER, userId);
+        ChatTypist typist = chatService.typist(userId);
+        if (typist != null) session.getAttributes().put(TYPIST, typist);
         rooms.computeIfAbsent(gatheringId, k -> ConcurrentHashMap.newKeySet()).add(session);
     }
 
@@ -74,12 +89,27 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         Long gatheringId = (Long) session.getAttributes().get(GATHERING);
         Long userId = (Long) session.getAttributes().get(USER);
 
-        String content;
+        JsonNode body;
         try {
-            JsonNode body = objectMapper.readTree(message.getPayload());
-            content = body.path("content").asText(null);
+            body = objectMapper.readTree(message.getPayload());
         } catch (IOException e) {
             sendError(session, "메시지 형식이 올바르지 않아요.");
+            return;
+        }
+        if ("typing".equals(body.path("type").asText())) {
+            handleTyping(session, gatheringId, body.path("typing").asBoolean(true));
+            return;
+        }
+        String content = body.path("content").asText(null);
+
+        long waitMs = sendLimiter.tryAcquire(userId);
+        if (waitMs > 0) {
+            Map<String, Object> limited = new LinkedHashMap<>();
+            limited.put("type", "rate_limited");
+            limited.put("message", "너무 빨리 보내고 있어요. " + (waitMs + 999) / 1000 + "초 뒤에 다시 보낼 수 있어요.");
+            limited.put("retryAfterMs", waitMs);
+            if (content != null) limited.put("content", content);   // 화면이 입력칸에 되돌려 놓을 수 있게
+            send(session, limited);
             return;
         }
 
@@ -105,13 +135,41 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         log.debug("채팅 연결 오류 {}: {}", session.getId(), exception.getMessage());
     }
 
+    /**
+     * "입력 중" 신호를 같은 방의 다른 사람에게만 퍼뜨린다 (저장하지 않음).
+     * 같은 사람이 다른 탭으로도 들어와 있으면 그 탭에는 보내지 않는다.
+     */
+    private void handleTyping(WebSocketSession session, Long gatheringId, boolean typing) throws IOException {
+        ChatTypist typist = (ChatTypist) session.getAttributes().get(TYPIST);
+        if (typist == null) return;
+        long now = System.currentTimeMillis();
+        if (typing) {
+            Long last = (Long) session.getAttributes().get(LAST_TYPING);
+            if (last != null && now - last < TYPING_MIN_INTERVAL_MS) return;
+            session.getAttributes().put(LAST_TYPING, now);
+        } else {
+            session.getAttributes().remove(LAST_TYPING);
+        }
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", "typing");
+        payload.put("typing", typing);
+        payload.put("user", typist);
+        broadcast(gatheringId, payload, (Long) session.getAttributes().get(USER));
+    }
+
     /** 같은 방 사람들에게 보낸다. 그사이 참여를 취소한 사람의 연결은 끊는다 */
     private void broadcast(Long gatheringId, Object payload) throws IOException {
+        broadcast(gatheringId, payload, null);
+    }
+
+    /** exceptUserId가 있으면 그 회원의 연결에는 보내지 않는다 */
+    private void broadcast(Long gatheringId, Object payload, Long exceptUserId) throws IOException {
         Set<WebSocketSession> room = rooms.get(gatheringId);
         if (room == null) return;
         Set<Long> members = chatService.members(gatheringId);
         TextMessage text = new TextMessage(objectMapper.writeValueAsString(payload));
         for (WebSocketSession s : room) {
+            if (exceptUserId != null && exceptUserId.equals(s.getAttributes().get(USER))) continue;
             if (!members.contains((Long) s.getAttributes().get(USER))) {
                 room.remove(s);
                 closeQuietly(s);
@@ -128,9 +186,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     private void sendError(WebSocketSession session, String message) throws IOException {
+        send(session, Map.of("type", "error", "message", message));
+    }
+
+    private void send(WebSocketSession session, Object payload) throws IOException {
         if (session.isOpen()) {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
-                    Map.of("type", "error", "message", message))));
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
         }
     }
 

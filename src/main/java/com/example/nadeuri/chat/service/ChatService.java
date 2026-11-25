@@ -2,6 +2,7 @@ package com.example.nadeuri.chat.service;
 
 import com.example.nadeuri.chat.domain.ChatMessage;
 import com.example.nadeuri.chat.dto.ChatMessageView;
+import com.example.nadeuri.chat.dto.ChatTypist;
 import com.example.nadeuri.chat.exception.NotParticipantException;
 import com.example.nadeuri.chat.repository.ChatMessageRepository;
 import com.example.nadeuri.gathering.domain.Gathering;
@@ -45,6 +46,13 @@ public class ChatService {
     /** 회원의 공개 UUID (채팅 화면에서 "내 메시지"를 가려낼 때) */
     public String userPublicId(Long userId) {
         return userRepository.findById(userId).map(User::getPublicId).orElse(null);
+    }
+
+    /** "입력 중" 표시에 쓰는 회원 공개 UUID와 닉네임. 탈퇴했으면 null */
+    public ChatTypist typist(Long userId) {
+        return userRepository.findById(userId)
+                .map(u -> new ChatTypist(u.getPublicId(), u.getNickname()))
+                .orElse(null);
     }
 
     public boolean canChat(Long gatheringId, Long userId) {

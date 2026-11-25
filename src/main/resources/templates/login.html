@@ -31,6 +31,11 @@
              autocapitalize="none" spellcheck="false" maxlength="20" th:value="${username}" placeholder="아이디 입력">
       <label for="password">비밀번호</label>
       <input id="password" name="password" type="password" required autocomplete="current-password" placeholder="비밀번호 입력">
+      <!--/* 체크하면 브라우저를 닫거나 30분 넘게 쉬어도 14일 동안 로그인이 유지된다 (공용 PC에서는 끄기) */-->
+      <label class="remember-me" for="remember-me">
+        <input id="remember-me" name="remember-me" type="checkbox">
+        <span>로그인 상태 유지</span>
+      </label>
       <button type="submit" class="btn btn-block form-submit">로그인</button>
     </form>
     <p class="meta form-foot">
