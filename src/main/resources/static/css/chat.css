@@ -39,11 +39,35 @@
 /* 지운 메시지: 흐린 기울임 글씨 */
 .chat-msg.is-deleted .chat-bubble,
 .chat-msg.is-mine.is-deleted .chat-bubble { border-color: var(--line); background: #f6f4ee; color: #9a9585; font-style: italic; }
-/* 내 메시지 "삭제": 마우스를 올리거나 키보드로 가거나, 휴대폰은 말풍선을 눌렀을 때만 보인다 */
-.chat-del-form { flex: none; margin: 0; opacity: 0; pointer-events: none; transition: opacity .12s; }
-.chat-msg.is-mine:hover .chat-del-form,
-.chat-msg.is-mine:focus-within .chat-del-form,
-.chat-msg.show-actions .chat-del-form { opacity: 1; pointer-events: auto; }
+/* 내 메시지 "수정·삭제": 마우스를 올리거나 키보드로 가거나, 휴대폰은 말풍선을 눌렀을 때만 보인다 */
+.chat-actions { display: flex; flex: none; align-items: center; gap: 4px; opacity: 0; pointer-events: none; transition: opacity .12s; }
+.chat-msg.is-mine:hover .chat-actions,
+.chat-msg.is-mine:focus-within .chat-actions,
+.chat-msg.show-actions .chat-actions { opacity: 1; pointer-events: auto; }
+.chat-del-form { margin: 0; }
+.chat-act { padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: #5f5a4c; font-size: 11px; font-weight: 700; cursor: pointer; }
+.chat-act:hover { background: var(--yellow-wash); }
+/* 시간 칸: 고친 메시지는 시간 위에 "수정됨" (누르면 수정 기록) */
+.chat-meta { display: flex; flex: none; flex-direction: column; align-items: flex-start; gap: 1px; }
+.chat-msg.is-mine .chat-meta { align-items: flex-end; }
+.chat-edited { padding: 0; border: 0; background: none; color: #8c7a45; font-size: 10px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.chat-edited:hover { color: #6b5311; }
+/* 고치는 중인 말풍선 */
+.chat-msg.is-editing .chat-bubble { outline: 2px solid #e6c35a; outline-offset: 2px; }
+.chat-editing { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 14px; border-top: 1px solid var(--line); background: var(--yellow-wash); color: #6b5311; font-size: 12px; font-weight: 650; }
+.chat-editing[hidden] { display: none; }
+.chat-editing-cancel { padding: 3px 10px; border: 1px solid #e3d4a5; border-radius: 999px; background: #fff; color: #6b5311; font-size: 11px; font-weight: 700; cursor: pointer; }
+/* 수정 기록 창 */
+.chat-history { width: min(100% - 32px, 400px); max-width: none; margin: auto; padding: 0; border: 0; border-radius: 14px; background: #fff; color: var(--ink); box-shadow: 0 18px 48px rgba(40, 35, 15, .22); }
+.chat-history::backdrop { background: rgba(41, 39, 31, .38); }
+.chat-history-box { display: grid; gap: 12px; padding: 22px 20px 16px; }
+.chat-history-title { margin: 0; font-size: 16px; font-weight: 750; }
+.chat-history-list { display: grid; max-height: min(60vh, 420px); gap: 10px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.chat-history-item { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fbf8f0; }
+.chat-history-item.is-current { border-color: var(--yellow); background: var(--yellow-soft); }
+.chat-history-meta { display: block; margin-bottom: 4px; color: var(--muted); font-size: 11px; font-weight: 650; }
+.chat-history-text { margin: 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.chat-history-close { justify-self: end; }
 .chat-msg.is-mine:not(.is-deleted) .chat-bubble { cursor: pointer; }
 @media (hover: hover) { .chat-msg.is-mine:not(.is-deleted) .chat-bubble { cursor: default; } }
 .chat-del { padding: 3px 8px; border: 1px solid #ecd3ce; border-radius: 999px; background: #fff; color: var(--error); font-size: 11px; font-weight: 700; cursor: pointer; }

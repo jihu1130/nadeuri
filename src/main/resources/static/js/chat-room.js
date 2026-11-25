@@ -11,8 +11,11 @@ const ME = shell.dataset.me || null;              // 내 공개 UUID
  *    다른 사람의 typing은 마지막 신호 뒤 4초가 지나면 저절로 사라진다.
  * 5) 도배 방지: 1초에 5개를 넘게 보내면 서버가 3초 동안 막고 {"type":"rate_limited"}를 보낸다.
  *    막힌 글은 입력칸에 되돌려 놓고, 남은 초를 보여 주며 보내기 버튼을 잠근다.
- * 6) 삭제: 내 말풍선에 마우스를 올리거나(휴대폰은 말풍선을 누르면) "삭제"가 보인다. 확인 창(confirm.js) 뒤
+ * 6) 삭제: 내 말풍선에 마우스를 올리거나(휴대폰은 말풍선을 누르면) "수정·삭제"가 보인다. 확인 창(confirm.js) 뒤
  *    {"type":"delete","id":N}을 보내고, 서버가 방 모두에게 {"type":"deleted","id":N}을 보내면 "삭제된 메시지예요"로 바꾼다.
+ * 7) 수정: "수정"을 누르면 입력칸에 원래 내용이 들어가고(위에 "메시지 수정 중"), 보내면 {"type":"edit","id","content"}.
+ *    서버가 {"type":"edited","message"}를 보내면 내용을 바꾸고 "수정됨"을 붙인다. "수정됨"을 누르면
+ *    GET /api/gatherings/{id}/messages/{메시지 id}/revisions 로 이전 내용을 보여 준다 (참여자 누구나).
  */
 const $ = id => document.getElementById(id);
 const log = $('chatLog'), list = $('chatList'), input = $('chatInput'), sendBtn = $('chatSend');
@@ -78,6 +81,7 @@ function sendTyping(typing) {
   socket.send(JSON.stringify({ type: 'typing', typing }));
 }
 function noteMyTyping() {
+  if (editing) return;   // 고치는 중에는 "입력 중"을 보내지 않는다
   const hasText = !!input.value.trim();
   clearTimeout(typingIdleTimer);
   if (!hasText) {
@@ -159,13 +163,148 @@ function scrollToBottom() {
 
 const DELETED_TEXT = '삭제된 메시지예요';
 
-/** 말풍선을 "삭제된 메시지"로 바꾼다 (삭제 버튼도 없앤다) */
+/** 말풍선을 "삭제된 메시지"로 바꾼다 (수정·삭제 버튼과 "수정됨"도 없앤다) */
 function markDeleted(row) {
   if (!row || row.classList.contains('is-deleted')) return;
+  if (editing && editing.row === row) cancelEdit();
   row.classList.add('is-deleted');
   row.classList.remove('show-actions');
   row.querySelector('.chat-bubble').textContent = DELETED_TEXT;
-  row.querySelector('.chat-del-form')?.remove();
+  row.querySelector('.chat-actions')?.remove();
+  row.querySelector('.chat-edited')?.remove();
+}
+
+/** 고친 메시지를 반영한다: 새 내용 + "수정됨" */
+function markEdited(m) {
+  const row = list.querySelector(`.chat-msg[data-id="${Number(m.id)}"]`);
+  if (!row || row.classList.contains('is-deleted')) return;
+  row.querySelector('.chat-bubble').textContent = m.content;
+  if (!row.querySelector('.chat-edited')) row.querySelector('.chat-meta').prepend(editedButton(m.id));
+}
+
+/** "수정됨" — 누르면 이전 내용을 보여 준다 (참여자 누구나) */
+function editedButton(id) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'chat-edited';
+  btn.textContent = '수정됨';
+  btn.title = '수정 전 내용 보기';
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    showHistory(id);
+  });
+  return btn;
+}
+
+/* ----- 수정 기록 창 ----- */
+let historyDialog = null;
+
+function fullTimeLabel(d) {
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 ${timeLabel(d)}`;
+}
+
+async function showHistory(id) {
+  if (!historyDialog) {
+    historyDialog = document.createElement('dialog');
+    historyDialog.className = 'chat-history';
+    historyDialog.setAttribute('aria-labelledby', 'chatHistoryTitle');
+    const box = document.createElement('div');
+    box.className = 'chat-history-box';
+    const title = document.createElement('p');
+    title.className = 'chat-history-title';
+    title.id = 'chatHistoryTitle';
+    title.textContent = '수정 기록';
+    const items = document.createElement('ol');
+    items.className = 'chat-history-list';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'btn secondary chat-history-close';
+    close.textContent = '닫기';
+    close.addEventListener('click', () => historyDialog.close());
+    box.append(title, items, close);
+    historyDialog.appendChild(box);
+    historyDialog.addEventListener('click', e => { if (e.target === historyDialog) historyDialog.close(); });
+    document.body.appendChild(historyDialog);
+  }
+  const items = historyDialog.querySelector('.chat-history-list');
+  items.textContent = '';
+  try {
+    const versions = await api(`/${Number(id)}/revisions`);
+    if (!versions.length) {
+      const li = document.createElement('li');
+      li.textContent = '삭제된 메시지예요.';
+      items.appendChild(li);
+    }
+    // 지금 내용이 맨 위, 그 아래로 예전 내용
+    versions.slice().reverse().forEach(v => {
+      const li = document.createElement('li');
+      li.className = 'chat-history-item' + (v.current ? ' is-current' : '');
+      const meta = document.createElement('span');
+      meta.className = 'chat-history-meta';
+      meta.textContent = (v.current ? '지금 · ' : '') + fullTimeLabel(new Date(v.writtenAt));
+      const text = document.createElement('p');
+      text.className = 'chat-history-text';
+      text.textContent = v.content;
+      li.append(meta, text);
+      items.appendChild(li);
+    });
+    historyDialog.showModal();
+  } catch {
+    showError('수정 기록을 불러오지 못했어요.');
+  }
+}
+
+/* ----- 수정 모드: 입력칸에 원래 내용을 넣고, 보내면 고친다 (Esc·취소로 그만두기) ----- */
+let editing = null;   // { id, row, draft }
+
+function startEdit(row, content) {
+  if (editing) cancelEdit();
+  editing = { id: Number(row.dataset.id), row, draft: input.value };
+  stopMyTyping();
+  row.classList.add('is-editing');
+  row.classList.remove('show-actions');
+  input.value = content ?? row.querySelector('.chat-bubble').textContent;
+  $('chatEditing').hidden = false;
+  $('chatForm').classList.add('is-editing');
+  sendBtn.textContent = '수정';
+  autosize();
+  updateSendButton();
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+}
+
+function cancelEdit() {
+  if (!editing) return;
+  const draft = editing.draft;
+  endEdit();
+  input.value = draft;   // 수정하기 전에 쓰던 글은 되돌려 놓는다
+  autosize();
+  updateSendButton();
+}
+
+function endEdit() {
+  if (!editing) return;
+  editing.row.classList.remove('is-editing');
+  editing = null;
+  $('chatEditing').hidden = true;
+  $('chatForm').classList.remove('is-editing');
+  sendBtn.textContent = '보내기';
+}
+
+/** 내 메시지 옆 "수정"·"삭제" 버튼 */
+function actionsEl(row, id) {
+  const box = document.createElement('span');
+  box.className = 'chat-actions';
+  const edit = document.createElement('button');
+  edit.type = 'button';
+  edit.className = 'chat-act';
+  edit.textContent = '수정';
+  edit.addEventListener('click', e => {
+    e.stopPropagation();
+    startEdit(row);
+  });
+  box.append(edit, deleteForm(id));
+  return box;
 }
 
 /** 내 메시지 옆 "삭제" 버튼. 확인 창은 confirm.js가 data-confirm을 보고 띄운다 */
@@ -232,10 +371,15 @@ function messageEl(m) {
   time.className = 'chat-time';
   time.dateTime = m.createdAt;
   time.textContent = timeLabel(at);
-  line.append(bubble, time);
+  // 시간 칸: 고친 메시지면 시간 위에 "수정됨"
+  const meta = document.createElement('span');
+  meta.className = 'chat-meta';
+  if (m.edited && !m.deleted) meta.appendChild(editedButton(m.id));
+  meta.appendChild(time);
+  line.append(bubble, meta);
   if (mine && !m.deleted) {
-    line.appendChild(deleteForm(m.id));
-    // 마우스가 없는 휴대폰: 내 말풍선을 누르면 "삭제"가 보였다 숨었다 한다
+    line.appendChild(actionsEl(row, m.id));
+    // 마우스가 없는 휴대폰: 내 말풍선을 누르면 "수정·삭제"가 보였다 숨었다 한다
     bubble.addEventListener('click', () => {
       list.querySelectorAll('.chat-msg.show-actions').forEach(el => { if (el !== row) el.classList.remove('show-actions'); });
       row.classList.toggle('show-actions');
@@ -341,13 +485,18 @@ function connect() {
       add([data.message], 'bottom');
       removeTypist(data.message.userId);   // 보냈으면 더 이상 입력 중이 아님
       if (stick) scrollToBottom();
+    } else if (data.type === 'edited') {
+      markEdited(data.message);
     } else if (data.type === 'deleted') {
       markDeleted(list.querySelector(`.chat-msg[data-id="${Number(data.id)}"]`));
     } else if (data.type === 'typing') {
       onTyping(data);
     } else if (data.type === 'rate_limited') {
-      // 막힌 글을 잃지 않게 입력칸이 비어 있으면 되돌려 놓는다
-      if (data.content && !input.value.trim()) {
+      // 막힌 글을 잃지 않게 입력칸이 비어 있으면 되돌려 놓는다 (수정이었으면 수정 모드로)
+      const editRow = data.editId ? list.querySelector(`.chat-msg[data-id="${Number(data.editId)}"]`) : null;
+      if (editRow && !editRow.classList.contains('is-deleted') && !editing && !input.value.trim()) {
+        startEdit(editRow, data.content);
+      } else if (data.content && !input.value.trim()) {
         input.value = data.content;
         autosize();
       }
@@ -395,6 +544,17 @@ function stopForGood(message) {
 function send() {
   const text = input.value.trim();
   if (!text || !isOpen() || Date.now() < blockedUntil) return;
+  if (editing) {
+    const { id, row, draft } = editing;
+    const unchanged = text === row.querySelector('.chat-bubble').textContent;
+    endEdit();
+    if (!unchanged) socket.send(JSON.stringify({ type: 'edit', id, content: text }));
+    input.value = draft;   // 수정 전에 쓰던 글로 돌아간다
+    autosize();
+    updateSendButton();
+    input.focus();
+    return;
+  }
   socket.send(JSON.stringify({ content: text }));
   iAmTyping = false;          // 서버가 메시지를 퍼뜨리면 다른 사람 화면에서 "입력 중"이 지워진다
   clearTimeout(typingIdleTimer);
@@ -415,7 +575,14 @@ input.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
     e.preventDefault();
     send();
+  } else if (e.key === 'Escape' && editing) {
+    e.preventDefault();
+    cancelEdit();
   }
+});
+$('chatEditCancel').addEventListener('click', () => {
+  cancelEdit();
+  input.focus();
 });
 input.addEventListener('input', () => {
   autosize();

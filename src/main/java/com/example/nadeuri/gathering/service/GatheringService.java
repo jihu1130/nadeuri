@@ -204,6 +204,7 @@ public class GatheringService {
     }
 
     private void deleteWithRecords(Gathering g) {
+        chatMessageRepository.deleteRevisionsByGatheringId(g.getId());
         chatMessageRepository.deleteAllByGatheringId(g.getId());
         reviewService.removeForGathering(g.getId()); // 후기·"또 만나요"
         participantRepository.deleteAllByGatheringId(g.getId());

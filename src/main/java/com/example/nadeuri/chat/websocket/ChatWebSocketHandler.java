@@ -41,6 +41,8 @@ import java.util.regex.Pattern;
  *       한 연결에서 0.8초 안에 다시 온 "입력 중"은 무시한다.</li>
  *   <li>삭제: {"type":"delete","id":메시지 id} → 내가 보낸 메시지면 내용을 지우고 같은 방 모두에게
  *       {"type":"deleted","id":메시지 id}. 남의 메시지·없는 메시지는 보낸 사람에게만 error.</li>
+ *   <li>수정: {"type":"edit","id":메시지 id,"content":"..."} → 내가 보낸 메시지면 고치고(이전 내용은 기록) 모두에게
+ *       {"type":"edited","message":{...,"edited":true}}. 도배 방지 횟수에 같이 센다.</li>
  * </ul>
  * 방 목록은 이 서버 메모리에만 있다 (서버가 여러 대가 되면 Redis 등으로 바꿔야 함).
  */
@@ -108,6 +110,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         String content = body.path("content").asText(null);
+        boolean edit = "edit".equals(type);
 
         long waitMs = sendLimiter.tryAcquire(userId);
         if (waitMs > 0) {
@@ -116,11 +119,21 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             limited.put("message", "너무 빨리 보내고 있어요. " + (waitMs + 999) / 1000 + "초 뒤에 다시 보낼 수 있어요.");
             limited.put("retryAfterMs", waitMs);
             if (content != null) limited.put("content", content);   // 화면이 입력칸에 되돌려 놓을 수 있게
+            if (edit) limited.put("editId", body.path("id").asLong());
             send(session, limited);
             return;
         }
 
         try {
+            if (edit) {
+                if (!body.path("id").canConvertToLong()) {
+                    sendError(session, "메시지를 찾을 수 없어요.");
+                    return;
+                }
+                ChatMessageView edited = chatService.edit(gatheringId, userId, body.path("id").asLong(), content);
+                broadcast(gatheringId, Map.of("type", "edited", "message", edited));
+                return;
+            }
             ChatMessageView saved = chatService.send(gatheringId, userId, content);
             broadcast(gatheringId, Map.of("type", "message", "message", saved));
         } catch (NotParticipantException e) {

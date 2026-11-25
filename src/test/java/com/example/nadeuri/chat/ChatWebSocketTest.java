@@ -275,6 +275,40 @@ class ChatWebSocketTest {
     }
 
     @Test
+    void 내_메시지를_고치면_같은_방_모두에게_새_내용이_간다() throws Exception {
+        User host = user("주최");
+        User a = user("고치미");
+        Gathering g = gathering(host);
+        gatherings.join(g.getId(), a.getId());
+
+        Inbox hostInbox = new Inbox(), aInbox = new Inbox();
+        WebSocketSession hostWs = connect(g.getPublicId(), sessionCookie(host), base(), hostInbox);
+        WebSocketSession aWs = connect(g.getPublicId(), sessionCookie(a), base(), aInbox);
+        for (int i = 0; i < 50 && handler.connectionCount(g.getId()) < 2; i++) Thread.sleep(20);
+
+        aWs.sendMessage(new TextMessage("{\"content\":\"3시\"}"));
+        long id = json.readTree(aInbox.messages.poll(5, TimeUnit.SECONDS)).path("message").path("id").asLong();
+        hostInbox.messages.poll(5, TimeUnit.SECONDS);
+
+        // 남의 메시지는 못 고친다 (주최자에게만 오류)
+        hostWs.sendMessage(new TextMessage("{\"type\":\"edit\",\"id\":" + id + ",\"content\":\"바꿈\"}"));
+        assertThat(json.readTree(hostInbox.messages.poll(5, TimeUnit.SECONDS)).path("type").asText()).isEqualTo("error");
+        assertThat(aInbox.messages.poll(300, TimeUnit.MILLISECONDS)).isNull();
+
+        aWs.sendMessage(new TextMessage("{\"type\":\"edit\",\"id\":" + id + ",\"content\":\"4시\"}"));
+        for (Inbox inbox : new Inbox[]{hostInbox, aInbox}) {
+            JsonNode edited = json.readTree(inbox.messages.poll(5, TimeUnit.SECONDS));
+            assertThat(edited.path("type").asText()).isEqualTo("edited");
+            assertThat(edited.path("message").path("id").asLong()).isEqualTo(id);
+            assertThat(edited.path("message").path("content").asText()).isEqualTo("4시");
+            assertThat(edited.path("message").path("edited").asBoolean()).isTrue();
+        }
+
+        hostWs.close();
+        aWs.close();
+    }
+
+    @Test
     void 참여자가_아니면_연결이_바로_끊긴다() throws Exception {
         Gathering g = gathering(user("주최"));
         User outsider = user("구경꾼");

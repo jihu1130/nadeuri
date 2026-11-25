@@ -20,11 +20,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
@@ -42,6 +44,7 @@ class ChatTest {
     @Autowired MockMvc mvc;
     @Autowired ChatService chat;
     @Autowired ChatMessageRepository messages;
+    @Autowired com.example.nadeuri.chat.repository.ChatMessageRevisionRepository revisionRepository;
     @Autowired GatheringService gatherings;
     @Autowired UserService users;
 
@@ -238,5 +241,80 @@ class ChatTest {
         gatherings.leave(g.getId(), a.getId());
         assertThatThrownBy(() -> chat.delete(g.getId(), a.getId(), mine.id()))
                 .isInstanceOf(NotParticipantException.class);
+    }
+
+    @Test
+    void 내_메시지를_고치면_수정됨이_되고_이전_내용은_누구나_순서대로_볼_수_있다() throws Exception {
+        User host = user("주최");
+        User a = user("참여자");
+        Gathering g = gathering(host);
+        gatherings.join(g.getId(), a.getId());
+        ChatMessageView m = chat.send(g.getId(), a.getId(), "3시에 만나요");
+
+        ChatMessageView first = chat.edit(g.getId(), a.getId(), m.id(), "  4시에 만나요 ");
+        assertThat(first.content()).isEqualTo("4시에 만나요");
+        assertThat(first.edited()).isTrue();
+        assertThat(first.createdAt()).as("보낸 시각은 그대로").isCloseTo(m.createdAt(), within(1, ChronoUnit.MILLIS));
+        chat.edit(g.getId(), a.getId(), m.id(), "5시에 만나요");
+
+        // 주최자(다른 참여자)도 수정 기록을 본다: 오래된 순, 마지막이 지금 내용
+        var versions = chat.revisions(g.getId(), host.getId(), m.id());
+        assertThat(versions).extracting(v -> v.content()).containsExactly("3시에 만나요", "4시에 만나요", "5시에 만나요");
+        assertThat(versions).extracting(v -> v.current()).containsExactly(false, false, true);
+        assertThat(versions.get(0).writtenAt()).isCloseTo(m.createdAt(), within(1, ChronoUnit.MILLIS));
+        assertThat(chat.history(g.getId(), host.getId(), null).get(0).edited()).isTrue();
+
+        // API: 참여자는 200, 밖의 사람은 403, 다른 방 메시지 번호는 404
+        String url = "/api/gatherings/" + g.getPublicId() + "/messages/" + m.id() + "/revisions";
+        mvc.perform(get(url).with(oauth2Login().oauth2User(login(host))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].content").value("3시에 만나요"))
+                .andExpect(jsonPath("$[2].current").value(true));
+        mvc.perform(get(url).with(oauth2Login().oauth2User(login(user("구경꾼"))))).andExpect(status().isForbidden());
+        User otherHost = user("다른주최");
+        Gathering other = gathering(otherHost);
+        mvc.perform(get("/api/gatherings/" + other.getPublicId() + "/messages/" + m.id() + "/revisions")
+                        .with(oauth2Login().oauth2User(login(otherHost))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void 남의_메시지_지운_메시지_같은_내용은_고칠_수_없고_지우면_수정_기록도_사라진다() {
+        User host = user("주최");
+        User a = user("참여자");
+        Gathering g = gathering(host);
+        gatherings.join(g.getId(), a.getId());
+        ChatMessageView hosts = chat.send(g.getId(), host.getId(), "주최자 글");
+        ChatMessageView mine = chat.send(g.getId(), a.getId(), "처음");
+
+        assertThatThrownBy(() -> chat.edit(g.getId(), a.getId(), hosts.id(), "바꿈"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("내가 보낸");
+        assertThatThrownBy(() -> chat.edit(g.getId(), a.getId(), mine.id(), " 처음 "))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("바뀐 내용");
+        assertThatThrownBy(() -> chat.edit(g.getId(), a.getId(), mine.id(), "   "))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> chat.edit(g.getId(), a.getId(), mine.id(), "가".repeat(501)))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        chat.edit(g.getId(), a.getId(), mine.id(), "두 번째");
+        assertThat(revisionRepository.findByMessageIdOrderByIdAsc(mine.id())).hasSize(1);
+        chat.delete(g.getId(), a.getId(), mine.id());
+        assertThat(revisionRepository.findByMessageIdOrderByIdAsc(mine.id())).as("지우면 이전 내용도 지움").isEmpty();
+        assertThat(chat.revisions(g.getId(), host.getId(), mine.id())).isEmpty();
+        assertThatThrownBy(() -> chat.edit(g.getId(), a.getId(), mine.id(), "되살리기"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("삭제된");
+    }
+
+    @Test
+    void 모임을_지우면_메시지의_수정_기록도_함께_지운다() {
+        User host = user("주최");
+        Gathering g = gathering(host);
+        ChatMessageView m = chat.send(g.getId(), host.getId(), "처음");
+        chat.edit(g.getId(), host.getId(), m.id(), "고침");
+
+        gatherings.delete(g.getId(), host.getId());
+
+        assertThat(messages.findById(m.id())).isEmpty();
+        assertThat(revisionRepository.findByMessageIdOrderByIdAsc(m.id())).isEmpty();
     }
 }

@@ -1,10 +1,13 @@
 package com.example.nadeuri.chat.controller;
 
 import com.example.nadeuri.chat.dto.ChatMessageView;
+import com.example.nadeuri.chat.dto.ChatRevisionView;
 import com.example.nadeuri.chat.service.ChatService;
 import com.example.nadeuri.gathering.service.GatheringService;
 import com.example.nadeuri.global.security.LoginUser;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,5 +42,17 @@ public class ChatApiController {
             return chatService.since(id, me, after);
         }
         return chatService.history(id, me, before);
+    }
+
+    /** "수정됨"을 눌렀을 때: 그 메시지의 이전 내용들과 지금 내용 (오래된 순). 이 방의 메시지가 아니면 404 */
+    @GetMapping("/{messageId}/revisions")
+    public List<ChatRevisionView> revisions(@PathVariable("id") UUID publicId, @PathVariable long messageId,
+                                            @AuthenticationPrincipal LoginUser user) {
+        Long id = gatheringService.idOf(publicId);
+        try {
+            return chatService.revisions(id, user == null ? null : user.getId(), messageId);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage());
+        }
     }
 }

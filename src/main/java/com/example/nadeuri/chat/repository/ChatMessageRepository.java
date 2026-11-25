@@ -19,7 +19,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Query("""
             SELECT new com.example.nadeuri.chat.dto.ChatMessageView(
                        m.id, u.publicId, u.nickname, u.profileImageUrl, m.content, m.createdAt,
-                       CASE WHEN m.deletedAt IS NULL THEN false ELSE true END)
+                       CASE WHEN m.deletedAt IS NULL THEN false ELSE true END,
+                       CASE WHEN m.editedAt IS NULL THEN false ELSE true END)
             FROM ChatMessage m LEFT JOIN User u ON u.id = m.userId
             WHERE m.gatheringId = :gatheringId AND m.id < :beforeId
             ORDER BY m.id DESC
@@ -31,13 +32,20 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Query("""
             SELECT new com.example.nadeuri.chat.dto.ChatMessageView(
                        m.id, u.publicId, u.nickname, u.profileImageUrl, m.content, m.createdAt,
-                       CASE WHEN m.deletedAt IS NULL THEN false ELSE true END)
+                       CASE WHEN m.deletedAt IS NULL THEN false ELSE true END,
+                       CASE WHEN m.editedAt IS NULL THEN false ELSE true END)
             FROM ChatMessage m LEFT JOIN User u ON u.id = m.userId
             WHERE m.gatheringId = :gatheringId AND m.id > :afterId
             ORDER BY m.id ASC
             """)
     List<ChatMessageView> findAfter(@Param("gatheringId") Long gatheringId, @Param("afterId") long afterId,
                                     Pageable limit);
+
+    /** 모임을 지울 때: 그 모임 메시지들의 수정 기록 (메시지보다 먼저 지운다) */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM ChatMessageRevision r WHERE r.messageId IN "
+            + "(SELECT m.id FROM ChatMessage m WHERE m.gatheringId = :gatheringId)")
+    int deleteRevisionsByGatheringId(@Param("gatheringId") Long gatheringId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM ChatMessage m WHERE m.gatheringId = :gatheringId")

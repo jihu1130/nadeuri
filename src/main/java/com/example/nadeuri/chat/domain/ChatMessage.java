@@ -8,7 +8,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/** 모임 채팅 메시지 한 줄. 보낸 사람은 지울 수 있다 (줄은 남기고 내용만 비움) */
+/**
+ * 모임 채팅 메시지 한 줄. 보낸 사람은 고칠 수 있고(이전 내용은 ChatMessageRevision에 남음),
+ * 지울 수 있다 (줄은 남기고 내용만 비움).
+ */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -39,6 +42,10 @@ public class ChatMessage {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    /** 마지막으로 고친 시각. null이면 고친 적 없음 */
+    @Column(name = "edited_at")
+    private LocalDateTime editedAt;
+
     public ChatMessage(Long gatheringId, Long userId, String content) {
         this.gatheringId = gatheringId;
         this.userId = userId;
@@ -48,6 +55,23 @@ public class ChatMessage {
 
     public boolean isDeleted() {
         return deletedAt != null;
+    }
+
+    public boolean isEdited() {
+        return editedAt != null;
+    }
+
+    /** 지금 내용이 쓰인 시각 (고쳤으면 마지막으로 고친 시각) */
+    public LocalDateTime currentWrittenAt() {
+        return editedAt != null ? editedAt : createdAt;
+    }
+
+    /** 내용 고치기. 고치기 전 내용을 돌려준다 (부른 쪽이 수정 기록으로 저장) */
+    public ChatMessageRevision edit(String newContent) {
+        ChatMessageRevision previous = new ChatMessageRevision(id, content, currentWrittenAt());
+        this.content = newContent;
+        this.editedAt = Times.now();
+        return previous;
     }
 
     /** 삭제: 내용은 DB에서도 비운다 (다시 볼 수 없음) */
