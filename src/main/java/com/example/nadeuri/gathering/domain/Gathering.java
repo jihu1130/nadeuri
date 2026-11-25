@@ -50,6 +50,10 @@ public class Gathering {
 
     private int maxPeople;
 
+    /** 번개 모임 (저장하는 때부터 2시간 안에 시작하는 즉석 모임). 규칙 확인은 GatheringCreateRequest */
+    @Column(nullable = false)
+    private boolean flash;
+
     /** 참여 인원은 GatheringRepository.incrementIfAvailable()로만 원자적으로 증가시킨다 */
     private int currentPeople;
 
@@ -58,6 +62,12 @@ public class Gathering {
     public Gathering(String title, String description, ActivityTag tag, String placeName,
                      double latitude, double longitude, LocalDateTime startAt, LocalDateTime endAt,
                      int maxPeople) {
+        this(title, description, tag, placeName, latitude, longitude, startAt, endAt, maxPeople, false);
+    }
+
+    public Gathering(String title, String description, ActivityTag tag, String placeName,
+                     double latitude, double longitude, LocalDateTime startAt, LocalDateTime endAt,
+                     int maxPeople, boolean flash) {
         if (!endAt.isAfter(startAt)) {
             throw new IllegalArgumentException("끝나는 시간은 시작 시간보다 뒤여야 해요.");
         }
@@ -70,6 +80,7 @@ public class Gathering {
         this.startAt = startAt;
         this.endAt = endAt;
         this.maxPeople = maxPeople;
+        this.flash = flash;
         this.currentPeople = 1; // 주최자
         this.createdAt = Times.now();
     }

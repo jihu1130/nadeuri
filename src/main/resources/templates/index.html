@@ -104,7 +104,10 @@
               <button type="button" class="filter-chip is-active" data-tag="" aria-pressed="true">전체<span class="filter-chip-count">0</span></button>
               <button type="button" class="filter-chip" th:each="t : ${tags}" th:data-tag="${t.name()}" aria-pressed="false"><span th:text="${t.emoji + ' ' + t.label}">🚶 산책</span><span class="filter-chip-count">0</span></button>
             </div>
-            <label class="filter-open"><input type="checkbox" id="filterOpenOnly"> 모집 중만</label>
+            <div class="filter-checks">
+              <label class="filter-open"><input type="checkbox" id="filterOpenOnly"> 모집 중만</label>
+              <label class="filter-open"><input type="checkbox" id="filterFlashOnly"> ⚡ 번개만</label>
+            </div>
           </div>
         </div>
         <div id="list" class="meetup-list" aria-live="polite"><div class="list-state"><span class="loading-spinner"></span><p>모임 목록을 불러오는 중입니다.</p></div></div>

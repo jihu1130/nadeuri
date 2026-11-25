@@ -20,7 +20,8 @@ function fmt(dt) {
 const BADGE_CLASS = { ONGOING: 'ongoing', FULL: 'full' };
 function badge(g) {
   const cls = BADGE_CLASS[g.status];
-  return cls ? ` <span class="status-badge ${cls}">${esc(g.statusLabel)}</span>` : '';
+  return (g.flash ? ' <span class="flash-badge">⚡ 번개</span>' : '')
+    + (cls ? ` <span class="status-badge ${cls}">${esc(g.statusLabel)}</span>` : '');
 }
 /* 진행 중이면 끝나는 시간을, 아니면 시작 시간을 보여 준다 */
 function when(g) {
@@ -156,14 +157,15 @@ async function loadAt(lat, lng, isCurrent) {
  * (다시 불러오지 않고 화면에서만 거른다. 다시 검색해도 고른 필터는 유지된다)
  */
 let gatherings = [];
-const filters = { keyword: '', tag: '', openOnly: false };
+const filters = { keyword: '', tag: '', openOnly: false, flashOnly: false };
 
 function isFiltering() {
-  return Boolean(filters.keyword || filters.tag || filters.openOnly);
+  return Boolean(filters.keyword || filters.tag || filters.openOnly || filters.flashOnly);
 }
 function matchesFilter(g) {
   if (filters.tag && g.tag !== filters.tag) return false;
   if (filters.openOnly && g.status !== 'RECRUITING') return false;
+  if (filters.flashOnly && !g.flash) return false;
   if (filters.keyword) {
     const text = `${g.title} ${g.placeName} ${g.tagLabel}`.toLowerCase();
     if (!text.includes(filters.keyword)) return false;
@@ -190,8 +192,10 @@ function resetFilters() {
   filters.keyword = '';
   filters.tag = '';
   filters.openOnly = false;
+  filters.flashOnly = false;
   document.getElementById('filterKeyword').value = '';
   document.getElementById('filterOpenOnly').checked = false;
+  document.getElementById('filterFlashOnly').checked = false;
   renderTagFilter();
   renderGatherings();
 }
@@ -224,10 +228,10 @@ function renderGatherings() {
       pos = new kakao.maps.LatLng(g.latitude, g.longitude);
       const pin = document.createElement('button');
       pin.type = 'button';
-      pin.className = 'map-pin';
-      pin.setAttribute('aria-label', `${g.title} 모임 정보 보기`);
+      pin.className = g.flash ? 'map-pin is-lightning' : 'map-pin';   // 번개 모임은 번쩍이는 핀
+      pin.setAttribute('aria-label', `${g.flash ? '번개 모임 ' : ''}${g.title} 모임 정보 보기`);
       pin.textContent = g.emoji;
-      const pinOverlay = new kakao.maps.CustomOverlay({ position: pos, content: pin, yAnchor: 1, clickable: true, zIndex: 3 });
+      const pinOverlay = new kakao.maps.CustomOverlay({ position: pos, content: pin, yAnchor: 1, clickable: true, zIndex: g.flash ? 4 : 3 });
       pinOverlay.setMap(map);
       info = new kakao.maps.CustomOverlay({
         position: pos, yAnchor: 1.45, clickable: true, zIndex: 4,
@@ -236,7 +240,7 @@ function renderGatherings() {
       pin.addEventListener('click', e => { e.stopPropagation(); openInfo?.setMap(null); info.setMap(map); openInfo = info; selectListItem(item, isMapExpanded()); });
       overlays.push(pinOverlay, info);
     }
-    item.className = 'meetup-item';
+    item.className = g.flash ? 'meetup-item is-lightning' : 'meetup-item';
     item.href = `/gatherings/${g.id}`;
     item.innerHTML = `<span class="meetup-emoji">${esc(g.emoji)}</span><span class="meetup-copy"><span class="meetup-tag">${esc(g.tagLabel)}${badge(g)}</span><strong>${esc(g.title)}</strong><span class="meetup-meta">${esc(g.placeName)}</span><span class="meetup-time">${when(g)} <i>·</i> ${g.currentPeople}/${g.maxPeople}명</span></span><span class="meetup-arrow" aria-hidden="true">↗</span>`;
     if (map) {
@@ -403,6 +407,10 @@ document.getElementById('filterKeyword').addEventListener('input', e => {
 });
 document.getElementById('filterOpenOnly').addEventListener('change', e => {
   filters.openOnly = e.target.checked;
+  renderGatherings();
+});
+document.getElementById('filterFlashOnly').addEventListener('change', e => {
+  filters.flashOnly = e.target.checked;
   renderGatherings();
 });
 document.getElementById('filterTags').addEventListener('click', e => {

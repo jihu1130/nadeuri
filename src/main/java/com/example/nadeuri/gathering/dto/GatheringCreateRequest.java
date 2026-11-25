@@ -2,6 +2,7 @@ package com.example.nadeuri.gathering.dto;
 
 import com.example.nadeuri.gathering.domain.ActivityTag;
 import com.example.nadeuri.gathering.domain.Gathering;
+import com.example.nadeuri.global.util.Times;
 import jakarta.validation.constraints.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -31,17 +32,42 @@ public record GatheringCreateRequest(
         @Max(value = MAX_DURATION, message = "진행 시간은 24시간까지 정할 수 있어요.")
         Integer durationMinutes,
         @NotNull(message = "정원을 적어 주세요.") @Min(value = 2, message = "정원은 2명 이상이어야 해요.")
-        @Max(value = 50, message = "정원은 50명까지 정할 수 있어요.") Integer maxPeople
+        @Max(value = 50, message = "정원은 50명까지 정할 수 있어요.") Integer maxPeople,
+        // 번개 모임 체크칸. 체크하지 않으면 값이 오지 않아 null (= 일반 모임)
+        Boolean flash
 ) {
     public static final String PLACE_REQUIRED = "모임 장소를 선택해 주세요. 장소를 검색해 고르거나 지도에서 위치를 눌러 주세요.";
     public static final int MIN_DURATION = 30;
     public static final int MAX_DURATION = 24 * 60;
+    /** 번개 모임은 저장하는 때부터 이 시간(분) 안에 시작해야 한다 */
+    public static final int FLASH_WINDOW = 120;
+    /** 화면에서 "2시간 뒤"를 누르고 저장하기까지 걸리는 시간을 봐준다 */
+    private static final int FLASH_GRACE = 10;
+    public static final String FLASH_TOO_LATE = "번개 모임은 지금부터 2시간 안에 시작해야 해요. 시작 시간을 다시 골라 주세요.";
+
+    /** 번개 모임 체크칸 없이 만드는 경우 (일반 모임). 생성자를 하나만 둬야 스프링이 폼 값을 묶을 수 있어서 메서드로 둔다 */
+    public static GatheringCreateRequest of(String title, String description, ActivityTag tag, String placeName,
+                                            Double latitude, Double longitude, LocalDateTime startAt,
+                                            Integer durationMinutes, Integer maxPeople) {
+        return new GatheringCreateRequest(title, description, tag, placeName, latitude, longitude, startAt, durationMinutes, maxPeople, null);
+    }
+
+    public boolean isFlashOn() {
+        return Boolean.TRUE.equals(flash);
+    }
+
+    /** 번개 모임이면 시작 시간이 지금부터 2시간 안인지 (시작 시간이 비었으면 다른 검사가 알려 준다) */
+    @AssertTrue(message = FLASH_TOO_LATE)
+    public boolean isFlashStartSoon() {
+        if (!isFlashOn() || startAt == null) return true;
+        return !startAt.isAfter(Times.now().plusMinutes(FLASH_WINDOW + FLASH_GRACE));
+    }
 
     public LocalDateTime endAt() {
         return startAt.plusMinutes(durationMinutes);
     }
 
     public Gathering toEntity() {
-        return new Gathering(title, description, tag, placeName, latitude, longitude, startAt, endAt(), maxPeople);
+        return new Gathering(title, description, tag, placeName, latitude, longitude, startAt, endAt(), maxPeople, isFlashOn());
     }
 }

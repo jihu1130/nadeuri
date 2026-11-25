@@ -55,7 +55,7 @@ class GatheringMembershipTest {
     }
 
     private Gathering gathering(User host, String title) {
-        return service.create(new GatheringCreateRequest(title, null, ActivityTag.WALK, "장소",
+        return service.create(GatheringCreateRequest.of(title, null, ActivityTag.WALK, "장소",
                 37.5, 127.0, Times.now().plusDays(1), 120, 5), host.getId());
     }
 
@@ -171,7 +171,7 @@ class GatheringMembershipTest {
     }
 
     private static GatheringCreateRequest edited(String title, int maxPeople) {
-        return new GatheringCreateRequest(title, "설명 바꿈", ActivityTag.RUNNING, "새 장소",
+        return GatheringCreateRequest.of(title, "설명 바꿈", ActivityTag.RUNNING, "새 장소",
                 37.55, 126.9, Times.now().plusDays(2).withSecond(0).withNano(0), 120, maxPeople);
     }
 

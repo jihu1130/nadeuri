@@ -45,7 +45,7 @@ class PublicIdTest {
     }
 
     private Gathering gathering(double lat, double lng) {
-        return gatherings.create(new GatheringCreateRequest("UUID 모임", null, ActivityTag.WALK, "장소",
+        return gatherings.create(GatheringCreateRequest.of("UUID 모임", null, ActivityTag.WALK, "장소",
                 lat, lng, Times.now().plusDays(1), 120, 5), user().getId());
     }
 

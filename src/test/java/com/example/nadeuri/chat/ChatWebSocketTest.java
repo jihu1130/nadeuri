@@ -120,7 +120,7 @@ class ChatWebSocketTest {
     }
 
     private Gathering gathering(User host) {
-        return gatherings.create(new GatheringCreateRequest("WS 모임", null, ActivityTag.WALK, "장소",
+        return gatherings.create(GatheringCreateRequest.of("WS 모임", null, ActivityTag.WALK, "장소",
                 37.5, 127.0, Times.now().plusDays(1), 120, 10), host.getId());
     }
 

@@ -21,7 +21,8 @@ public record GatheringFormView(
         Double longitude,
         String startAt,      // yyyy-MM-ddTHH:mm (날씨 달력의 처음 선택값)
         Integer durationMinutes,
-        Integer maxPeople
+        Integer maxPeople,
+        boolean flash        // 번개 모임
 ) {
     private static final DateTimeFormatter START = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
     private static final int DEFAULT_DURATION = 120;
@@ -32,13 +33,13 @@ public record GatheringFormView(
     public record DurationOption(int minutes, String label) {}
 
     public static GatheringFormView empty() {
-        return new GatheringFormView(null, null, null, null, null, null, null, DEFAULT_DURATION, 6);
+        return new GatheringFormView(null, null, null, null, null, null, null, DEFAULT_DURATION, 6, false);
     }
 
     public static GatheringFormView from(Gathering g) {
         return new GatheringFormView(g.getTitle(), g.getTag().name(), g.getDescription(), g.getPlaceName(),
                 g.getLatitude(), g.getLongitude(), g.getStartAt().format(START),
-                (int) g.durationMinutes(), g.getMaxPeople());
+                (int) g.durationMinutes(), g.getMaxPeople(), g.isFlash());
     }
 
     public static GatheringFormView from(GatheringCreateRequest r) {
@@ -46,7 +47,7 @@ public record GatheringFormView(
                 r.placeName(), r.latitude(), r.longitude(),
                 r.startAt() == null ? null : r.startAt().format(START),
                 r.durationMinutes() == null ? DEFAULT_DURATION : r.durationMinutes(),
-                r.maxPeople() == null ? 6 : r.maxPeople());
+                r.maxPeople() == null ? 6 : r.maxPeople(), r.isFlashOn());
     }
 
     /** 선택지 목록. 저장된 값이 목록에 없으면(예: 기존 모임) 그 값도 넣어서 수정할 때 바뀌지 않게 한다 */

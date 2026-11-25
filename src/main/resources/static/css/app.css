@@ -521,3 +521,44 @@ button.link-btn { font: inherit; cursor: pointer; }
 .confirm-dialog-actions .btn:focus-visible { outline: 3px solid rgba(225, 184, 49, .45); outline-offset: 2px; }
 @keyframes confirm-in { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
 @keyframes confirm-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===== 번개 모임 (2시간 안에 시작하는 즉석 모임) ===== */
+/* 배지: 어두운 바탕에 노란 글자라 일반 상태 배지와 한눈에 구분된다 */
+.flash-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: #2f2a1a; color: #ffd84a; font-size: 11px; font-weight: 800; line-height: 1.5; white-space: nowrap; vertical-align: middle; }
+.meetup-tag .flash-badge, .map-info .flash-badge { padding: 0 6px; font-size: 10px; }
+.map-info .flash-badge { align-self: flex-start; }
+.detail-labels .flash-badge { padding: 5px 10px; font-size: 12px; }
+/* 지도 핀: 어두운 핀 + 번개 딱지 + 퍼져 나가는 노란 테두리 */
+.map-pin.is-lightning { position: relative; border-color: #ffd84a; background: #2f2a1a; }
+.map-pin.is-lightning::before { position: absolute; inset: -6px; border: 2px solid #f2c94c; border-radius: 16px 16px 16px 6px; content: ""; pointer-events: none; animation: lightning-pulse 1.6s ease-out infinite; }
+.map-pin.is-lightning::after { position: absolute; top: -9px; right: -9px; display: grid; width: 20px; height: 20px; place-items: center; border: 2px solid #fff; border-radius: 50%; background: #ffd84a; font-size: 11px; content: "⚡"; }
+@keyframes lightning-pulse { 0% { opacity: .9; transform: scale(.9); } 100% { opacity: 0; transform: scale(1.4); } }
+.meetup-item.is-lightning .meetup-emoji { background: #2f2a1a; box-shadow: 0 0 0 2px #ffd84a; }
+@media (prefers-reduced-motion: reduce) { .map-pin.is-lightning::before { animation: none; opacity: .7; } }
+/* 목록 필터: "모집 중만"·"번개만"을 세로로 */
+.filter-checks { display: grid; flex: none; gap: 2px; }
+
+/* 만들기 화면: 번개 모임 켜기 (체크칸을 스위치 모양으로) */
+.flash-toggle { position: relative; display: flex; align-items: center; gap: 12px; margin: 18px 0 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+.flash-toggle:hover { border-color: #e6d6a0; }
+.flash-toggle input { position: absolute; width: 1px; height: 1px; min-height: 0; margin: 0; padding: 0; opacity: 0; }
+.flash-toggle-icon { display: grid; width: 38px; height: 38px; flex: none; place-items: center; border-radius: 11px; background: #f4f1e8; font-size: 19px; transition: background .15s ease; }
+.flash-toggle-copy { display: grid; min-width: 0; flex: 1; gap: 2px; }
+.flash-toggle-copy strong { color: var(--ink); font-size: 14px; }
+.flash-toggle-copy span { color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.45; }
+.flash-switch { position: relative; width: 42px; height: 24px; flex: none; border-radius: 999px; background: #dcd7ca; transition: background .15s ease; }
+.flash-switch::after { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); content: ""; transition: transform .15s ease, background .15s ease; }
+.flash-toggle:has(input:checked) { border-color: #f2c94c; background: #fffaf0; }
+.flash-toggle input:checked ~ .flash-toggle-icon { background: #2f2a1a; }
+.flash-toggle input:checked ~ .flash-switch { background: #2f2a1a; }
+.flash-toggle input:checked ~ .flash-switch::after { background: #ffd84a; transform: translateX(18px); }
+.flash-toggle input:focus-visible ~ .flash-switch { outline: 3px solid rgba(226, 177, 36, .45); outline-offset: 2px; }
+/* 번개 모임 시작 시간: 지금부터 몇 분 뒤 */
+.flash-starts { display: grid; gap: 10px; padding: 14px; border: 1px solid #f0dc93; border-radius: 12px; background: #fffaf0; }
+.flash-starts[hidden], .wx-picker[hidden] { display: none; }
+.flash-start-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.flash-start-buttons button { min-height: 38px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: #4d483b; font-size: 13px; font-weight: 700; }
+.flash-start-buttons button:hover { border-color: #e6d6a0; background: #fffdf5; }
+.flash-start-buttons button[aria-pressed="true"] { border-color: #2f2a1a; background: #2f2a1a; color: #ffd84a; }
+.flash-start-summary { margin: 0; color: #5e594d; font-size: 13px; }
+.flash-start-summary b { color: #2f2a1a; }

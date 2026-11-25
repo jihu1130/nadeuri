@@ -104,7 +104,7 @@ class AssistantTest {
 
     @Test
     void 근처_모임과_대화를_자료로_보내고_회원_정보는_보내지_않는다() {
-        Gathering g = gatheringService.create(new GatheringCreateRequest("한강 저녁 산책", null, ActivityTag.WALK, "여의나루역 2번 출구",
+        Gathering g = gatheringService.create(GatheringCreateRequest.of("한강 저녁 산책", null, ActivityTag.WALK, "여의나루역 2번 출구",
                 37.5271, 126.9326, Times.now().plusDays(1), 120, 6), USER_IDS.incrementAndGet());
         when(gemini.generate(anyString(), anyString())).thenReturn("답");
 

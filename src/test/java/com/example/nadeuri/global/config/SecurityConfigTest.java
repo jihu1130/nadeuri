@@ -33,7 +33,7 @@ class SecurityConfigTest {
     private static final java.util.concurrent.atomic.AtomicLong HOST_IDS = new java.util.concurrent.atomic.AtomicLong(910_000L);
 
     private Gathering gathering() {
-        return service.create(new GatheringCreateRequest("테스트", null, ActivityTag.WALK, "장소",
+        return service.create(GatheringCreateRequest.of("테스트", null, ActivityTag.WALK, "장소",
                 37.5, 127.0, Times.now().plusDays(1), 120, 5), HOST_IDS.incrementAndGet());
     }
 

@@ -23,6 +23,7 @@
   <div class="card detail-summary">
     <div class="detail-labels">
       <span class="activity-label" th:text="${g.tag.emoji + ' ' + g.tag.label}"></span>
+      <span class="flash-badge" th:if="${g.flash}">⚡ 번개</span>
       <span class="status-badge" th:classappend="${status.cssClass}" th:text="${status.label}">모집 중</span>
     </div>
     <h2 class="gathering-title" th:text="${g.title}"></h2>

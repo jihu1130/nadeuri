@@ -275,7 +275,7 @@ public class GatheringService {
     public void update(Long id, Long userId, GatheringCreateRequest req) {
         getForEdit(id, userId);
         int updated = repository.updateIfFits(id, req.title(), req.description(), req.tag(), req.placeName(),
-                req.latitude(), req.longitude(), req.startAt(), req.endAt(), req.maxPeople());
+                req.latitude(), req.longitude(), req.startAt(), req.endAt(), req.maxPeople(), req.isFlashOn());
         if (updated == 0) {
             throw new IllegalArgumentException(
                     "지금 참여한 사람이 " + get(id).getCurrentPeople() + "명이라 정원을 그보다 적게 줄일 수 없어요.");

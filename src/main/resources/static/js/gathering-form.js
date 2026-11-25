@@ -191,8 +191,11 @@ const weatherPicker = (() => {
 
   function renderSummary() {
     const dt = selectedDateTime();
-    $('startAt').value = `${sel.date}T${pad(sel.hour)}:${pad(sel.minute)}`;
-    updateEndHint();
+    // 번개 모임을 켜 둔 동안에는 시작 시간을 번개 버튼이 정한다 (예보를 늦게 받아 다시 그려도 덮어쓰지 않게)
+    if (!$('flash').checked) {
+      $('startAt').value = `${sel.date}T${pad(sel.hour)}:${pad(sel.minute)}`;
+      updateEndHint();
+    }
     const when = `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${WEEK[dt.getDay()]}) ${hourLabel(sel.hour).replace('시', '')}:${pad(sel.minute)}`;
     const f = forecastFor(sel.date, sel.hour);
     const info = f?.info;
@@ -222,7 +225,7 @@ const weatherPicker = (() => {
   far.addEventListener('change', () => { if (far.value) { sel.date = far.value; fixMinute(); render(); } });
 
   render();
-  return { load };
+  return { load, render };
 })();
 
 // 카카오 지도를 못 불러오면 기본 위치(여의도) 날씨라도 보여 준다
@@ -384,7 +387,66 @@ function updateEndHint() {
 $('durationMinutes').addEventListener('change', updateEndHint);
 updateEndHint();
 
-document.querySelector('form').addEventListener('submit', e => {
+/* ===== 번개 모임 =====
+ * 켜면 날씨 달력을 숨기고 "10분 뒤 ~ 2시간 뒤" 버튼으로 시작 시간을 정한다 (5분 단위로 올림).
+ * 끄면 날씨 달력에서 골라 둔 시간으로 돌아간다. 2시간 안인지는 서버도 다시 확인한다.
+ */
+const flashForm = (() => {
+  const toggle = $('flash');
+  const box = $('flashStarts');
+  const picker = document.querySelector('.wx-picker');
+  const buttons = box.querySelectorAll('[data-after]');
+  const pad = n => String(n).padStart(2, '0');
+  let chosen = null;                       // 고른 버튼 (지금부터 몇 분 뒤)
+
+  function startAfter(min) {
+    const d = new Date(Date.now() + min * 60000);
+    d.setSeconds(0, 0);
+    d.setMinutes(Math.ceil(d.getMinutes() / 5) * 5);   // 60분이 되면 Date가 다음 시로 넘긴다
+    return d;
+  }
+  function describe() {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec($('startAt').value || '');
+    const text = $('flashSummary');
+    if (!m || chosen == null && !toggle.defaultChecked) { text.textContent = '언제 시작할지 골라 주세요.'; return; }
+    const start = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+    const day = start.toDateString() === new Date().toDateString() ? '오늘' : '내일';
+    text.innerHTML = `<b>⚡ ${day} ${pad(start.getHours())}:${pad(start.getMinutes())}</b>에 시작해요`;
+  }
+  function apply(min) {
+    chosen = min;
+    const d = startAfter(min);
+    $('startAt').value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.after === min)));
+    updateEndHint();
+    describe();
+  }
+  function sync(byUser) {
+    const on = toggle.checked;
+    box.hidden = !on;
+    picker.hidden = on;
+    toggle.closest('form').classList.toggle('is-flash', on);
+    if (on) {
+      // 직접 켰으면 우선 30분 뒤로 맞춰 둔다. 수정·입력 오류로 다시 연 번개 모임은 저장된 시간을 그대로 둔다
+      if (chosen != null) apply(chosen); else if (byUser) apply(30); else describe();
+    } else {
+      chosen = null;
+      buttons.forEach(b => b.setAttribute('aria-pressed', 'false'));
+      weatherPicker.render();              // 날씨 달력에서 골라 둔 시간으로 되돌린다
+    }
+  }
+
+  buttons.forEach(b => b.addEventListener('click', () => apply(+b.dataset.after)));
+  toggle.addEventListener('change', () => sync(true));
+  sync(false);
+
+  // "30분 뒤"는 보내는 때부터 30분 뒤가 되도록 저장 직전에 다시 맞춘다 (화면을 오래 열어 둔 경우)
+  return { beforeSubmit() { if (toggle.checked && chosen != null) apply(chosen); } };
+})();
+
+// 머리말의 로그아웃 폼이 아니라 모임 폼에 건다 (예전엔 querySelector('form')이 로그아웃 폼을 잡았다)
+$('flash').closest('form').addEventListener('submit', e => {
+  flashForm.beforeSubmit();
   if (!$('latitude').value) {
     e.preventDefault();
     alert('모임 장소를 선택해 주세요. 장소를 검색해 고르거나 지도에서 위치를 눌러 주세요.');

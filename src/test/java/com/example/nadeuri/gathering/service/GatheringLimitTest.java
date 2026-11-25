@@ -39,7 +39,7 @@ class GatheringLimitTest {
     }
 
     private Gathering create(Long hostId) {
-        return service.create(new GatheringCreateRequest("제한 테스트", null, ActivityTag.OTHER, "장소",
+        return service.create(GatheringCreateRequest.of("제한 테스트", null, ActivityTag.OTHER, "장소",
                 37.5, 127.0, Times.now().plusDays(1), 120, 5), hostId);
     }
 

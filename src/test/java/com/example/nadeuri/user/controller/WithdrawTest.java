@@ -52,7 +52,7 @@ class WithdrawTest {
     }
 
     private Gathering hosted(User host) {
-        return gatheringService.create(new GatheringCreateRequest("탈퇴 테스트", null, ActivityTag.WALK, "장소",
+        return gatheringService.create(GatheringCreateRequest.of("탈퇴 테스트", null, ActivityTag.WALK, "장소",
                 -40.0, 175.0, Times.now().plusDays(1), 120, 5), host.getId());
     }
 

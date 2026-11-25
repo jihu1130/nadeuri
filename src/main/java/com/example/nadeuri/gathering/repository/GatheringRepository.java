@@ -73,14 +73,14 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
     @Query("""
             UPDATE Gathering g SET g.title = :title, g.description = :description, g.tag = :tag,
                    g.placeName = :placeName, g.latitude = :latitude, g.longitude = :longitude,
-                   g.startAt = :startAt, g.endAt = :endAt, g.maxPeople = :maxPeople
+                   g.startAt = :startAt, g.endAt = :endAt, g.maxPeople = :maxPeople, g.flash = :flash
             WHERE g.id = :id AND g.currentPeople <= :maxPeople
             """)
     int updateIfFits(@Param("id") Long id, @Param("title") String title, @Param("description") String description,
                      @Param("tag") ActivityTag tag, @Param("placeName") String placeName,
                      @Param("latitude") double latitude, @Param("longitude") double longitude,
                      @Param("startAt") LocalDateTime startAt, @Param("endAt") LocalDateTime endAt,
-                     @Param("maxPeople") int maxPeople);
+                     @Param("maxPeople") int maxPeople, @Param("flash") boolean flash);
 
     /** 참여 취소: 주최자 1명 아래로는 내려가지 않게 원자적으로 1 줄인다 */
     @Modifying(clearAutomatically = true, flushAutomatically = true)

@@ -64,7 +64,7 @@ class GatheringLifecycleTest {
     }
 
     private Gathering hosted(User host, String title, int startFromNowMin, int durationMin) {
-        return service.create(new GatheringCreateRequest(title, null, ActivityTag.WALK, "장소", LAT, LNG,
+        return service.create(GatheringCreateRequest.of(title, null, ActivityTag.WALK, "장소", LAT, LNG,
                 Times.now().plusMinutes(startFromNowMin), durationMin, 5), host.getId());
     }
 
@@ -231,7 +231,7 @@ class GatheringLifecycleTest {
 
     @Test
     void 진행_시간_선택지에_목록_밖의_저장값도_들어간다() {
-        GatheringFormView f = new GatheringFormView(null, null, null, null, null, null, null, 150, 6);
+        GatheringFormView f = new GatheringFormView(null, null, null, null, null, null, null, 150, 6, false);
         assertThat(f.durationOptions()).extracting(GatheringFormView.DurationOption::label)
                 .contains("30분", "1시간 30분", "2시간 30분", "12시간");
         assertThat(GatheringFormView.empty().durationMinutes()).isEqualTo(120);

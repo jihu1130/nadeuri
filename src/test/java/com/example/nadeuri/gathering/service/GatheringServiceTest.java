@@ -29,7 +29,7 @@ class GatheringServiceTest {
     @Autowired GatheringService service;
 
     private Gathering create(double lat, double lng, int max) {
-        return service.create(new GatheringCreateRequest("테스트", null, ActivityTag.WALK, "장소",
+        return service.create(GatheringCreateRequest.of("테스트", null, ActivityTag.WALK, "장소",
                 lat, lng, Times.now().plusDays(1), 120, max), HOST_IDS.incrementAndGet());
     }
 
