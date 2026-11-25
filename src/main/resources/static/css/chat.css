@@ -51,3 +51,13 @@
   .chat-log { padding: 10px 12px 14px; }
   .chat-body { max-width: 82%; }
 }
+
+/* 채팅 칸과 바깥 배경 구분: 바깥은 한 톤 어둡게, 채팅 칸은 둥근 카드(테두리·그림자)로 띄운다.
+ * 메시지 영역은 머리·입력칸(흰색)보다 살짝 따뜻한 색이라 흰 말풍선이 또렷하게 보인다. 휴대폰은 화면 꽉 차게 */
+.chat-page { background: #f1ede2; }
+.chat-shell { width: min(760px, calc(100% - 32px)); margin: 16px auto; overflow: hidden; border: 1px solid #ddd7c8; border-radius: 18px; box-shadow: 0 12px 32px rgba(70, 58, 25, .10), 0 2px 6px rgba(70, 58, 25, .05); }
+.chat-log, .chat-typing { background: #fbf8f0; }
+@media (max-width: 640px) {
+  .chat-page { background: var(--page); }
+  .chat-shell { width: 100%; margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+}
