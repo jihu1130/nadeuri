@@ -12,6 +12,7 @@ import com.example.nadeuri.gathering.exception.NotHostException;
 import com.example.nadeuri.gathering.repository.GatheringRepository;
 import com.example.nadeuri.gathering.repository.ParticipantRepository;
 import com.example.nadeuri.global.util.Times;
+import com.example.nadeuri.review.service.ReviewService;
 import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class GatheringService {
     private final UserRepository userRepository;
     private final ParticipantRepository participantRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ReviewService reviewService;
 
     public List<Gathering> findNearby(double lat, double lng, double radiusMeters) {
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
@@ -203,6 +205,7 @@ public class GatheringService {
 
     private void deleteWithRecords(Gathering g) {
         chatMessageRepository.deleteAllByGatheringId(g.getId());
+        reviewService.removeForGathering(g.getId()); // 후기·"또 만나요"
         participantRepository.deleteAllByGatheringId(g.getId());
         repository.delete(g);
     }

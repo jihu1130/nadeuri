@@ -18,6 +18,8 @@
 
 <div class="container">
   <div class="flash" th:if="${message}" th:text="${message}"></div>
+  <!--/* 후기 안내는 보통 후기 칸 안에 보이고, 후기 칸이 없을 때(아직 안 끝난 모임)만 여기에 */-->
+  <div class="flash" th:if="${reviewMessage != null and reviews == null}" th:text="${reviewMessage}"></div>
 
   <div class="page-heading"><p class="eyebrow">모임 상세</p><h1>모임 정보</h1></div>
   <div class="card detail-summary">
@@ -52,9 +54,78 @@
         <span class="participant-text">
           <span class="participant-name" th:text="${p.nickname}">닉네임</span>
           <span class="participant-bio" th:if="${p.bio}" th:text="${p.bio}" th:title="${p.bio}">자기소개</span>
+          <!--/* 평판: 받은 "또 만나요" 수, 모임장으로 받은 별점 평균 */-->
+          <th:block th:with="rep=${reputations.get(p.userId)}">
+            <span class="participant-rep" th:if="${rep != null}">
+              <span th:if="${rep.meetAgain > 0}" th:text="${'👋 또 만나요 ' + rep.meetAgain}" title="다른 참여자에게 받은 '다음에 또 만나요'">👋</span>
+              <span th:if="${rep.hostReviews > 0}" th:text="${'★ 모임장 ' + rep.hostRatingLabel() + ' (' + rep.hostReviews + ')'}" title="이 사람이 연 모임의 별점 평균">★</span>
+            </span>
+          </th:block>
         </span>
         <span class="participant-badge host" th:if="${p.host}">주최</span>
         <span class="participant-badge me" th:if="${loginUser != null and p.userId == loginUser.id}">나</span>
+        <!--/* 끝난 모임: 함께한 사람에게 "다음에 또 만나요" (누를 때마다 보내기·거두기) */-->
+        <form th:if="${reviews != null and reviews.canWrite and p.userId != loginUser.id}" method="post" class="meet-again-form"
+              th:action="@{/gatherings/{id}/meet-again(id=${g.publicId})}">
+          <input type="hidden" name="to" th:value="${p.publicId}">
+          <button type="submit" class="meet-again-btn" th:classappend="${reviews.sentTo(p.userId)} ? 'is-sent'"
+                  th:attr="aria-pressed=${reviews.sentTo(p.userId)},aria-label=${p.nickname + '님에게 다음에 또 만나요'}"
+                  th:text="${reviews.sentTo(p.userId)} ? '👋 보냈어요' : '👋 또 만나요'">👋 또 만나요</button>
+        </form>
+      </li>
+    </ul>
+  </div>
+
+  <!--/* 끝난 모임 후기: 별점 평균, 내 후기 쓰기·고치기(참여자, 끝나고 14일 안), 후기 목록 */-->
+  <div class="card review-card" id="reviews" th:if="${reviews != null}">
+    <div class="card-heading">
+      <div><p class="eyebrow">끝난 모임</p><h2>모임 후기</h2></div>
+      <div class="review-average" th:unless="${reviews.reviews.isEmpty()}">
+        <span class="review-stars" aria-hidden="true" th:text="${reviews.averageStars()}">★★★★☆</span>
+        <b th:text="${reviews.averageLabel()}">4.5</b>
+        <span class="review-average-count" th:text="${'후기 ' + reviews.reviews.size() + '개'}">후기 2개</span>
+      </div>
+    </div>
+
+    <div class="flash" th:if="${reviewMessage}" th:text="${reviewMessage}" role="status"></div>
+    <form th:if="${reviews.canWrite}" method="post" class="review-form" th:action="@{/gatherings/{id}/review(id=${g.publicId})}">
+      <p class="review-form-title" th:text="${reviews.mine == null} ? '오늘 모임 어땠어요?' : '내 후기 고치기'">오늘 모임 어땠어요?</p>
+      <!--/* 별 다섯 개: 화면에서는 1→5 순서지만 DOM은 5→1 (CSS로 고른 별과 그 왼쪽 별을 함께 칠하려고) */-->
+      <div class="star-input" role="radiogroup" aria-label="별점">
+        <th:block th:each="n : ${#numbers.sequence(5, 1, -1)}">
+          <input type="radio" name="rating" th:id="${'star' + n}" th:value="${n}" required
+                 th:checked="${reviews.mine != null and reviews.mine.rating == n}">
+          <label th:for="${'star' + n}" th:title="${n + '점'}"><span aria-hidden="true">★</span><span class="visually-hidden" th:text="${n + '점'}">점</span></label>
+        </th:block>
+      </div>
+      <label class="visually-hidden" for="reviewContent">한 줄 후기</label>
+      <textarea id="reviewContent" name="content" rows="2" maxlength="200"
+                placeholder="한 줄 후기 (선택) 예) 장소 안내가 친절했어요" th:text="${reviews.mine?.content}"></textarea>
+      <div class="review-form-actions">
+        <span class="field-help" th:text="${#temporals.format(reviews.writeUntil, 'M월 d일')} + '까지 남기거나 고칠 수 있어요'">까지</span>
+        <button class="btn" type="submit" th:text="${reviews.mine == null} ? '후기 남기기' : '고친 후기 저장'">후기 남기기</button>
+      </div>
+    </form>
+    <form th:if="${reviews.mine != null}" method="post" class="review-delete"
+          th:action="@{/gatherings/{id}/review/delete(id=${g.publicId})}"
+          data-confirm="내 후기를 지울까요? 별점과 한 줄 후기가 함께 지워져요.">
+      <button type="submit" class="danger">내 후기 지우기</button>
+    </form>
+    <p th:if="${reviews.participant and !reviews.canWrite}" class="detail-note">후기를 남기는 기간(모임이 끝나고 14일)이 지났어요.</p>
+
+    <p class="review-empty" th:if="${reviews.reviews.isEmpty()}">아직 후기가 없어요.</p>
+    <ul class="review-list" th:unless="${reviews.reviews.isEmpty()}">
+      <li th:each="r : ${reviews.reviews}" th:classappend="${loginUser != null and r.userId == loginUser.id} ? 'is-me'">
+        <img th:if="${r.profileImageUrl}" th:src="${r.profileImageUrl}" class="participant-avatar" alt="" referrerpolicy="no-referrer">
+        <span th:unless="${r.profileImageUrl}" class="participant-avatar initial" aria-hidden="true" th:text="${r.initial()}">나</span>
+        <div class="review-body">
+          <div class="review-head">
+            <b th:text="${r.nickname}">닉네임</b>
+            <span class="review-stars" th:text="${r.stars()}" th:attr="aria-label=${'별점 ' + r.rating + '점'}">★★★★★</span>
+            <time th:text="${#temporals.format(r.updatedAt, 'M월 d일')}">11월 25일</time>
+          </div>
+          <p th:if="${r.content}" th:text="${r.content}">후기</p>
+        </div>
       </li>
     </ul>
   </div>

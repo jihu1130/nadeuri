@@ -1,6 +1,7 @@
 package com.example.nadeuri.user.controller;
 
 import com.example.nadeuri.global.security.LoginUser;
+import com.example.nadeuri.review.service.ReviewService;
 import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.dto.PasswordChangeRequest;
 import com.example.nadeuri.user.dto.ProfileUpdateRequest;
@@ -39,6 +40,7 @@ import java.util.List;
 public class ProfileController {
 
     private final UserService userService;
+    private final ReviewService reviewService;
     private final SecurityContextRepository contextRepository = new HttpSessionSecurityContextRepository();
 
     @GetMapping("/me/profile")
@@ -117,6 +119,7 @@ public class ProfileController {
         model.addAttribute("nicknameMax", User.NICKNAME_MAX);
         model.addAttribute("bioMax", User.BIO_MAX);
         model.addAttribute("photoMaxBytes", ProfileImageStorage.MAX_BYTES);
+        model.addAttribute("reputation", reviewService.reputation(me.getId()));
         if (profileErrors != null) model.addAttribute("profileErrors", profileErrors);
         if (passwordErrors != null) model.addAttribute("passwordErrors", passwordErrors);
         return "profile";

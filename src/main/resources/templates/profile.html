@@ -61,6 +61,22 @@
     </form>
   </section>
 
+  <!--/* 내 평판: 끝난 모임에서 다른 참여자들이 남긴 것 (모임 상세의 참여자 목록에도 보인다) */-->
+  <section class="card profile-section" aria-labelledby="repTitle">
+    <h2 id="repTitle">내 평판</h2>
+    <div class="rep-stats">
+      <div class="rep-stat">
+        <span class="rep-stat-value" th:text="${'👋 ' + reputation.meetAgain}">👋 0</span>
+        <span class="rep-stat-label">받은 "다음에 또 만나요"</span>
+      </div>
+      <div class="rep-stat">
+        <span class="rep-stat-value" th:text="${reputation.hostReviews > 0} ? ${'★ ' + reputation.hostRatingLabel()} : '★ -'">★ -</span>
+        <span class="rep-stat-label" th:text="${reputation.hostReviews > 0} ? ${'내가 연 모임 별점 (후기 ' + reputation.hostReviews + '개)'} : '내가 연 모임 별점 (아직 없음)'">내가 연 모임 별점</span>
+      </div>
+    </div>
+    <p class="field-help">모임이 끝나면 함께한 사람끼리 별점·후기와 "다음에 또 만나요"를 남길 수 있어요. 참여자 목록에서 닉네임 아래에 보여요.</p>
+  </section>
+
   <!--/* 아이디로 가입한 회원만: 카카오·구글 회원은 비밀번호가 없다 */-->
   <section class="card profile-section" aria-labelledby="passwordTitle" th:if="${local}">
     <h2 id="passwordTitle">비밀번호 바꾸기</h2>

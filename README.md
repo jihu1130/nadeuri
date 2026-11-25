@@ -196,6 +196,9 @@ nadeuri
 | GET | `/gatherings/{id}/edit` | 모임 수정 화면 (주최자만, 시작 전) 🔒 |
 | POST | `/gatherings/{id}/edit` | 모임 수정 저장 🔒 |
 | GET | `/me/gatherings` | 내 모임 (만든 모임 / 참여한 모임) 🔒 |
+| POST | `/gatherings/{id}/review` | 끝난 모임 후기 쓰기·고치기 (`rating` 1~5, `content` 200자). 참여자만, 끝나고 14일 안 🔒 |
+| POST | `/gatherings/{id}/review/delete` | 내 후기 지우기 🔒 |
+| POST | `/gatherings/{id}/meet-again` | 함께한 사람에게 "다음에 또 만나요" 보내기·거두기 (`to` = 회원 공개 UUID) 🔒 |
 | GET | `/gatherings/{id}/chat` | 모임 채팅 화면 (참여자만) 🔒 |
 | GET | `/api/gatherings/{id}/messages` | 지난 채팅 메시지 JSON (최근 50개, `?before=id` 더 이전, `?after=id` 그 뒤). 참여자가 아니면 403 |
 | WS | `/ws/gatherings/{id}/chat` | 채팅 WebSocket. 보내기 `{"content":"..."}`, 받기 `{"type":"message","message":{...}}` / `{"type":"error","message":"..."}`. 내 메시지 삭제 `{"type":"delete","id":N}` → 모두에게 `{"type":"deleted","id":N}` 🔒 |
@@ -228,7 +231,7 @@ nadeuri
 - [x] DB 마이그레이션 도구 도입 (Flyway)
 - [x] 한국어 오류 화면 (404·400·403·500)
 - [x] 모임 끝나는 시간과 상태 (모집 중·모집 마감·진행 중·종료)
-- [ ] 끝난 모임 후기, "다음에 또 만나요"
+- [x] 끝난 모임 후기, "다음에 또 만나요"
 
 ### 앞으로 할 일 (2026-11-23 추가)
 **채팅**
@@ -244,7 +247,7 @@ nadeuri
 **프로필·친구**
 - [x] 별명(닉네임) 변경
 - [x] 프로필 설정
-- [ ] 끝난 모임 리뷰·별점 → 프로필에 평판 표시
+- [x] 끝난 모임 리뷰·별점 → 프로필에 평판 표시
 - [ ] 지금까지의 활동 기록을 프로필에 표시 (어디까지 공개할지 본인이 선택)
 - [ ] 친구 추가
 

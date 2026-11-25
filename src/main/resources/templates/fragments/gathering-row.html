@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <body>
-<!--/* 내 모임 목록의 모임 한 줄. past=true면 끝난 모임으로 흐리게. 상태 배지는 컨트롤러가 넣은 now 기준 */-->
+<!--/* 내 모임 목록의 모임 한 줄. past=true면 끝난 모임으로 흐리게. 상태 배지는 컨트롤러가 넣은 now 기준.
+     끝난 모임은 상세의 후기 칸(#reviews)으로 가고, 아직 후기를 안 썼고 기간(끝나고 reviewDays일) 안이면 "후기 남기기" 표시 */-->
 <a th:fragment="row(g, past)" class="mine-item" th:classappend="${past} ? 'is-past'"
-   th:href="@{/gatherings/{id}(id=${g.publicId})}" th:with="st=${g.statusAt(now)}">
+   th:href="${past} ? @{/gatherings/{id}(id=${g.publicId})} + '#reviews' : @{/gatherings/{id}(id=${g.publicId})}" th:with="st=${g.statusAt(now)}">
   <span class="mine-emoji" aria-hidden="true" th:text="${g.tag.emoji}">🚶</span>
   <span class="mine-copy">
     <span class="mine-title-row">
       <strong th:text="${g.title}">모임 이름</strong>
       <span class="status-badge" th:classappend="${st.cssClass}" th:text="${st.label}">모집 중</span>
+      <span class="review-todo" th:if="${past and reviewed != null and !reviewed.contains(g.id) and g.endAt.plusDays(reviewDays).isAfter(now)}">✍ 후기 남기기</span>
     </span>
     <span class="mine-meta" th:text="${#temporals.format(g.startAt, 'M월 d일 (E) HH:mm') + ' ~ '
           + #temporals.format(g.endAt, g.startAt.toLocalDate() == g.endAt.toLocalDate() ? 'HH:mm' : 'M월 d일 HH:mm')

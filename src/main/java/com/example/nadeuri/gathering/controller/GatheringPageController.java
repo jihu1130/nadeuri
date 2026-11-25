@@ -11,6 +11,7 @@ import com.example.nadeuri.gathering.exception.NotHostException;
 import com.example.nadeuri.gathering.service.GatheringService;
 import com.example.nadeuri.global.security.LoginUser;
 import com.example.nadeuri.global.util.Times;
+import com.example.nadeuri.review.service.ReviewService;
 import com.example.nadeuri.weather.service.WeatherService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ public class GatheringPageController {
 
     private final GatheringService service;
     private final WeatherService weatherService;
+    private final ReviewService reviewService;
 
     @GetMapping("/")
     public String home(Model model) {
@@ -166,6 +168,9 @@ public class GatheringPageController {
         model.addAttribute("ended", g.isEndedAt(now));
         model.addAttribute("status", g.statusAt(now));
         model.addAttribute("durationLabel", GatheringFormView.label(g.durationMinutes()));
+        // 참여자마다 평판(받은 "또 만나요", 모임장 별점). 끝난 모임은 후기 칸도
+        model.addAttribute("reputations", reviewService.reputations(participants.stream().map(ParticipantView::userId).toList()));
+        if (g.isEndedAt(now)) model.addAttribute("reviews", reviewService.section(g, me, participants));
         model.addAttribute("weather",
                 weatherService.forecastAt(g.getLatitude(), g.getLongitude(), g.getStartAt()));
         return "gathering/detail";
@@ -188,6 +193,11 @@ public class GatheringPageController {
         model.addAttribute("hostedPast", reversed(hosted.stream().filter(upcoming.negate()).toList()));
         model.addAttribute("joinedUpcoming", joined.stream().filter(upcoming).toList());
         model.addAttribute("joinedPast", reversed(joined.stream().filter(upcoming.negate()).toList()));
+        // 끝난 모임 가운데 아직 후기를 안 쓴 것에 "후기 남기기" 표시 (끝나고 14일 안)
+        List<Long> pastIds = java.util.stream.Stream.concat(hosted.stream(), joined.stream())
+                .filter(upcoming.negate()).map(Gathering::getId).toList();
+        model.addAttribute("reviewed", reviewService.reviewedAmong(user.getId(), pastIds));
+        model.addAttribute("reviewDays", ReviewService.WINDOW_DAYS);
         return "gathering/mine";
     }
 

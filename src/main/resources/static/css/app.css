@@ -562,3 +562,55 @@ button.link-btn { font: inherit; cursor: pointer; }
 .flash-start-buttons button[aria-pressed="true"] { border-color: #2f2a1a; background: #2f2a1a; color: #ffd84a; }
 .flash-start-summary { margin: 0; color: #5e594d; font-size: 13px; }
 .flash-start-summary b { color: #2f2a1a; }
+
+/* ===== 끝난 모임 후기·평판 ===== */
+/* 참여자 이름 아래 평판 한 줄 (👋 또 만나요 n · ★ 모임장 4.5) */
+.participant-rep { display: inline-flex; gap: 6px; color: #8c7125; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+/* 함께한 사람에게 "또 만나요" 보내기 */
+.meet-again-form { margin: 0 0 0 2px; }
+.meet-again-btn { min-height: 26px; padding: 0 9px; border: 1px solid #ecd98f; border-radius: 999px; background: #fffaf0; color: #6b5311; font-size: 11px; font-weight: 750; white-space: nowrap; }
+.meet-again-btn:hover { border-color: var(--yellow-strong); background: var(--yellow-soft); }
+.meet-again-btn.is-sent { border-color: var(--yellow); background: var(--yellow); color: #30270f; }
+
+.review-card .card-heading { margin-bottom: 14px; }
+.review-average { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.review-average b { font-size: 17px; }
+.review-average-count { color: var(--muted); font-size: 12px; }
+.review-stars { color: #f0b31e; letter-spacing: 1px; }
+
+.review-form { display: grid; gap: 10px; margin-bottom: 10px; padding: 14px; border: 1px solid #f0dc93; border-radius: 12px; background: #fffaf0; }
+.review-form-title { margin: 0; color: #4d483b; font-size: 14px; font-weight: 750; }
+.review-form textarea { min-height: 0; resize: vertical; }
+.review-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.review-form-actions .field-help { margin: 0; }
+/* 별 다섯 개 고르기: DOM은 5→1, 화면은 row-reverse로 1→5. 고른 별(과 hover한 별)과 그 왼쪽 별을 칠한다 */
+.star-input { display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 2px; }
+.star-input input { position: absolute; width: 1px; height: 1px; min-height: 0; margin: 0; padding: 0; opacity: 0; }
+.star-input label { margin: 0; padding: 0 2px; color: #ded8c6; font-size: 30px; line-height: 1; cursor: pointer; transition: color .1s ease, transform .1s ease; }
+.star-input input:checked ~ label, .star-input label:hover, .star-input label:hover ~ label { color: #f0b31e; }
+.star-input label:hover { transform: scale(1.12); }
+.star-input input:focus-visible + label { outline: 3px solid rgba(226, 177, 36, .45); outline-offset: 1px; border-radius: 6px; }
+
+.review-delete { margin: 0 0 12px; text-align: right; }
+.review-delete button { padding: 0; border: 0; background: none; color: var(--error); font-size: 12px; font-weight: 650; text-decoration: underline; }
+.review-empty { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.review-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.review-list li { display: flex; align-items: flex-start; gap: 10px; padding: 12px 2px; border-top: 1px solid #f0ede6; }
+.review-list li:first-child { border-top: 0; }
+.review-list li.is-me { border-radius: 10px; background: var(--yellow-wash); padding-left: 8px; padding-right: 8px; }
+.review-list .participant-avatar { width: 32px; height: 32px; }
+.review-body { display: grid; min-width: 0; flex: 1; gap: 3px; }
+.review-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.review-head time { margin-left: auto; color: #a29d8e; font-size: 11px; }
+.review-body p { margin: 0; color: #454238; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
+
+/* 내 모임: 아직 후기를 안 쓴 끝난 모임 */
+.review-todo { flex: none; padding: 1px 7px; border-radius: 999px; background: var(--yellow); color: #30270f; font-size: 10.5px; font-weight: 800; white-space: nowrap; }
+
+/* 프로필: 내 평판 */
+.rep-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 10px; }
+.rep-stat { display: grid; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fffdf5; text-align: center; }
+.rep-stat-value { font-size: 20px; font-weight: 800; }
+.rep-stat-label { color: var(--muted); font-size: 12px; }
+.review-card { scroll-margin-top: 84px; }   /* #reviews로 이동할 때 위쪽 고정 머리말에 가리지 않게 */
+.review-card .flash { margin: 0 0 12px; }

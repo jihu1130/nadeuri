@@ -1,6 +1,7 @@
 package com.example.nadeuri.user.service;
 
 import com.example.nadeuri.gathering.service.GatheringService;
+import com.example.nadeuri.review.service.ReviewService;
 import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.dto.SocialProfile;
 import com.example.nadeuri.user.dto.PasswordChangeRequest;
@@ -25,6 +26,7 @@ public class UserService {
     private final GatheringService gatheringService;
     private final ProfileImageStorage profileImageStorage;
     private final RememberMeTokenStore rememberMeTokens;
+    private final ReviewService reviewService;
 
     /** 소셜 로그인(카카오, 구글) 성공 시: 처음이면 가입, 이미 있으면 프로필만 갱신 */
     @Transactional
@@ -75,6 +77,7 @@ public class UserService {
             throw new IllegalArgumentException("비밀번호가 맞지 않아요.");
         }
         gatheringService.removeAllFor(userId);
+        reviewService.removeAllFor(userId);   // 남의 모임에 쓴 후기, 보내고 받은 "또 만나요"
         rememberMeTokens.removeAll(userId);
         repository.delete(user);
         profileImageStorage.deleteIfOwned(user.getProfileImageUrl());
