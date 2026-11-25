@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>프로필 설정 - 나들이</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="form-page profile-page">
+<header class="topbar">
+  <a href="/" class="logo"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 10.2c0 5.1-7 11-7 11s-7-5.9-7-11a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></span><span>나들이</span></a>
+  <div th:replace="~{fragments/auth :: auth}"></div>
+</header>
+
+<div class="container">
+  <div class="flash" th:if="${message}" th:text="${message}"></div>
+  <div class="page-heading"><p class="eyebrow">내 정보</p><h1>프로필 설정</h1>
+    <p class="page-intro">닉네임·사진·자기소개는 모임 참여자 목록과 채팅에서 다른 사람에게 보여요.</p></div>
+
+  <!--/* 프로필 사진: 브라우저가 정사각형으로 잘라 줄인 뒤 올리고(js/profile.js), 서버가 한 번 더 다듬어 저장 */-->
+  <section class="card profile-section" aria-labelledby="photoTitle">
+    <h2 id="photoTitle">프로필 사진</h2>
+    <div class="profile-photo-row">
+      <div class="profile-photo" id="photoPreview">
+        <img th:if="${me.profileImageUrl}" th:src="${me.profileImageUrl}" alt="지금 프로필 사진" referrerpolicy="no-referrer">
+        <span th:unless="${me.profileImageUrl}" class="profile-initial" aria-hidden="true"
+              th:text="${#strings.substring(me.nickname, 0, 1)}">나</span>
+      </div>
+      <div class="profile-photo-actions">
+        <form method="post" th:action="@{/me/profile/photo}" enctype="multipart/form-data" id="photoForm"
+              th:attr="data-max-bytes=${photoMaxBytes}">
+          <label class="btn secondary profile-file-label" for="photoInput">사진 고르기</label>
+          <input class="visually-hidden" type="file" id="photoInput" name="photo" accept="image/jpeg,image/png,image/gif">
+          <button class="btn" type="submit" id="photoSubmit" disabled>올리기</button>
+        </form>
+        <form th:if="${me.profileImageUrl}" method="post" th:action="@{/me/profile/photo/delete}"
+              data-confirm="프로필 사진을 지울까요? 닉네임 첫 글자로 보이게 돼요.">
+          <button class="link-btn profile-photo-delete" type="submit">사진 지우기</button>
+        </form>
+        <p class="field-help">JPG·PNG·GIF, 5MB까지. 가운데를 정사각형으로 잘라서 저장해요. 사진의 촬영 위치 정보는 저장하지 않아요.</p>
+        <p class="profile-error" id="photoError" role="alert" th:text="${photoError}" th:hidden="${photoError == null}"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card profile-section" aria-labelledby="infoTitle">
+    <h2 id="infoTitle">기본 정보</h2>
+    <div class="errors" th:if="${profileErrors}">
+      <p th:each="e : ${profileErrors}" th:text="${e}"></p>
+    </div>
+    <form method="post" th:action="@{/me/profile}">
+      <label for="nickname">닉네임</label>
+      <input id="nickname" name="nickname" required th:maxlength="${nicknameMax}" th:value="${p.nickname}" autocomplete="nickname">
+      <label for="bio">자기소개 한 줄 <span class="label-optional">(선택)</span></label>
+      <input id="bio" name="bio" th:maxlength="${bioMax}" th:value="${p.bio}"
+             placeholder="예) 주말마다 한강에서 걷는 걸 좋아해요">
+      <p class="field-help"><span id="bioCount">0</span>/<span th:text="${bioMax}">100</span>자 · 참여자 목록에서 닉네임 아래에 보여요.</p>
+      <p class="field-help profile-provider">가입 방법: <b th:text="${provider}">카카오</b>
+        <th:block th:unless="${local}"> · 여기서 바꾼 닉네임·사진은 다시 로그인해도 그대로 유지돼요.</th:block></p>
+      <button class="btn form-submit" type="submit">저장</button>
+    </form>
+  </section>
+
+  <!--/* 아이디로 가입한 회원만: 카카오·구글 회원은 비밀번호가 없다 */-->
+  <section class="card profile-section" aria-labelledby="passwordTitle" th:if="${local}">
+    <h2 id="passwordTitle">비밀번호 바꾸기</h2>
+    <div class="errors" th:if="${passwordErrors}">
+      <p th:each="e : ${passwordErrors}" th:text="${e}"></p>
+    </div>
+    <form method="post" th:action="@{/me/password}">
+      <label for="currentPassword">지금 비밀번호</label>
+      <input id="currentPassword" name="currentPassword" type="password" required autocomplete="current-password">
+      <label for="newPassword">새 비밀번호</label>
+      <input id="newPassword" name="newPassword" type="password" required minlength="8" maxlength="64" autocomplete="new-password">
+      <p class="field-help">8~64자, 영문과 숫자를 모두 넣어 주세요.</p>
+      <label for="newPasswordConfirm">새 비밀번호 확인</label>
+      <input id="newPasswordConfirm" name="newPasswordConfirm" type="password" required maxlength="64" autocomplete="new-password">
+      <button class="btn form-submit" type="submit">비밀번호 바꾸기</button>
+    </form>
+  </section>
+
+  <p class="mine-account"><a th:href="@{/me/gatherings}">내 모임</a> · <a th:href="@{/me/withdraw}">회원 탈퇴</a></p>
+</div>
+<script th:src="@{/js/confirm.js}"></script>
+<script th:src="@{/js/profile.js}"></script>
+</body>
+</html>

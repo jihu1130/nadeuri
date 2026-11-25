@@ -27,7 +27,7 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
      */
     @Query("""
             SELECT new com.example.nadeuri.gathering.dto.ParticipantView(
-                       u.id, u.publicId, u.nickname, u.profileImageUrl, p.host, p.joinedAt)
+                       u.id, u.publicId, u.nickname, u.profileImageUrl, u.bio, p.host, p.joinedAt)
             FROM Participant p JOIN User u ON u.id = p.userId
             WHERE p.gatheringId = :gatheringId
             ORDER BY p.host DESC, p.joinedAt ASC, p.id ASC

@@ -16,3 +16,6 @@ src/.idea/
 # OS
 .DS_Store
 Thumbs.db
+
+# 회원이 올린 프로필 사진 (서버에만 저장)
+uploads/

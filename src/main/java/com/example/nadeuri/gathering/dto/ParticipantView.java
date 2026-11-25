@@ -9,6 +9,8 @@ public record ParticipantView(
         String publicId,
         String nickname,
         String profileImageUrl,
+        /** 자기소개 한 줄 (없으면 null) */
+        String bio,
         boolean host,
         LocalDateTime joinedAt
 ) {

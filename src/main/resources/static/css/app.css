@@ -459,3 +459,29 @@ button.link-btn { font: inherit; cursor: pointer; }
 .host-transfer-row select { flex: 1; min-width: 0; min-height: 44px; }
 .host-transfer-row .btn { flex: none; min-height: 44px; }
 .host-delete-note { padding: 10px 12px; border-radius: 9px; background: var(--yellow-wash); font-size: 12px; line-height: 1.5; }
+
+/* 상단바: 사진·닉네임을 누르면 프로필 설정 */
+.auth-profile { display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; color: inherit; }
+.auth-profile:hover .nickname { color: #74601c; text-decoration: underline; text-underline-offset: 3px; }
+
+/* 모임 상세: 참여자 이름 아래 자기소개 한 줄 */
+.participant-text { display: inline-flex; min-width: 0; flex-direction: column; line-height: 1.25; }
+.participant-bio { max-width: 14em; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 프로필 설정 */
+.profile-section { margin-bottom: 16px; }
+.profile-section h2 { margin: 0 0 4px; font-size: 17px; }
+.profile-photo-row { display: flex; align-items: flex-start; gap: 20px; margin-top: 12px; }
+.profile-photo { display: grid; width: 96px; height: 96px; flex: none; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 50%; background: var(--yellow-soft); }
+.profile-photo img { width: 100%; height: 100%; object-fit: cover; }
+.profile-initial { color: #6b5512; font-size: 38px; font-weight: 800; }
+.profile-photo-actions { min-width: 0; flex: 1; }
+.profile-photo-actions form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.profile-file-label { margin: 0; cursor: pointer; }
+.profile-photo-actions .btn { min-height: 40px; }
+.profile-photo-delete { margin-top: 6px; color: #a5452c; }
+.profile-error { margin: 8px 0 0; color: #a5452c; font-size: 13px; }
+.profile-error[hidden] { display: none; }
+.profile-provider { margin-top: 12px; }
+.label-optional { color: var(--muted); font-size: 12px; font-weight: 500; }
+@media (max-width: 520px) { .profile-photo-row { flex-direction: column; align-items: center; } }

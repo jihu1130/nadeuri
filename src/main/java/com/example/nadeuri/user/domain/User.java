@@ -51,6 +51,18 @@ public class User {
     @Column(length = 500)
     private String profileImageUrl;
 
+    /** 자기소개 한 줄 (참여자 목록에 보임). 없으면 null */
+    @Column(length = BIO_MAX)
+    private String bio;
+
+    /** 우리 사이트에서 닉네임을 직접 바꿨으면 true → 소셜 로그인 때 소셜 닉네임으로 덮어쓰지 않는다 */
+    @Column(name = "nickname_customized", nullable = false)
+    private boolean nicknameCustomized;
+
+    /** 우리 사이트에서 사진을 올리거나 지웠으면 true → 소셜 로그인 때 소셜 사진으로 덮어쓰지 않는다 */
+    @Column(name = "photo_customized", nullable = false)
+    private boolean photoCustomized;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime lastLoginAt;
@@ -76,11 +88,38 @@ public class User {
         return PROVIDER_LOCAL.equals(provider);
     }
 
-    /** 로그인할 때마다 소셜 프로필(닉네임, 사진)을 최신으로 맞춘다 */
+    /**
+     * 소셜 로그인할 때마다 소셜 프로필(닉네임, 사진)을 최신으로 맞춘다.
+     * 단, 우리 사이트에서 직접 바꾼 항목은 그대로 둔다.
+     */
     public void updateProfile(String nickname, String profileImageUrl) {
-        this.nickname = nickname;
-        this.profileImageUrl = profileImageUrl;
+        if (!nicknameCustomized) this.nickname = nickname;
+        if (!photoCustomized) this.profileImageUrl = profileImageUrl;
         this.lastLoginAt = Times.now();
+    }
+
+    public static final int NICKNAME_MAX = 20;
+    public static final int BIO_MAX = 100;
+
+    /** 프로필 설정: 닉네임·자기소개 바꾸기 (자기소개가 비어 있으면 지운다) */
+    public void changeProfile(String nickname, String bio) {
+        if (!nickname.equals(this.nickname)) {
+            this.nickname = nickname;
+            this.nicknameCustomized = true;
+        }
+        this.bio = (bio == null || bio.isBlank()) ? null : bio;
+    }
+
+    /** 프로필 사진 바꾸기. null이면 사진을 지운다 (첫 글자 동그라미로 표시) */
+    public void changePhoto(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+        this.photoCustomized = true;
+    }
+
+    /** 비밀번호 바꾸기 (우리 사이트 회원만). passwordHash는 반드시 PasswordEncoder로 만든 값 */
+    public void changePassword(String passwordHash) {
+        if (!isLocal()) throw new IllegalStateException("카카오·구글 회원은 비밀번호가 없어요.");
+        this.password = passwordHash;
     }
 
     public void markLoggedIn() {

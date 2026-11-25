@@ -48,7 +48,10 @@
       <li th:each="p : ${participants}" th:classappend="${loginUser != null and p.userId == loginUser.id} ? 'is-me'">
         <img th:if="${p.profileImageUrl}" th:src="${p.profileImageUrl}" class="participant-avatar" alt="" referrerpolicy="no-referrer">
         <span th:unless="${p.profileImageUrl}" class="participant-avatar initial" aria-hidden="true" th:text="${p.initial()}">나</span>
-        <span class="participant-name" th:text="${p.nickname}">닉네임</span>
+        <span class="participant-text">
+          <span class="participant-name" th:text="${p.nickname}">닉네임</span>
+          <span class="participant-bio" th:if="${p.bio}" th:text="${p.bio}" th:title="${p.bio}">자기소개</span>
+        </span>
         <span class="participant-badge host" th:if="${p.host}">주최</span>
         <span class="participant-badge me" th:if="${loginUser != null and p.userId == loginUser.id}">나</span>
       </li>

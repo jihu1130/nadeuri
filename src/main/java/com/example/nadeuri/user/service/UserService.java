@@ -3,6 +3,8 @@ package com.example.nadeuri.user.service;
 import com.example.nadeuri.gathering.service.GatheringService;
 import com.example.nadeuri.user.domain.User;
 import com.example.nadeuri.user.dto.SocialProfile;
+import com.example.nadeuri.user.dto.PasswordChangeRequest;
+import com.example.nadeuri.user.dto.ProfileUpdateRequest;
 import com.example.nadeuri.user.dto.SignUpRequest;
 import com.example.nadeuri.user.exception.DuplicateUsernameException;
 import com.example.nadeuri.user.repository.UserRepository;
@@ -11,6 +13,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +23,7 @@ public class UserService {
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
     private final GatheringService gatheringService;
+    private final ProfileImageStorage profileImageStorage;
 
     /** 소셜 로그인(카카오, 구글) 성공 시: 처음이면 가입, 이미 있으면 프로필만 갱신 */
     @Transactional
@@ -71,6 +75,61 @@ public class UserService {
         }
         gatheringService.removeAllFor(userId);
         repository.delete(user);
+        profileImageStorage.deleteIfOwned(user.getProfileImageUrl());
+    }
+
+    /** 프로필 설정: 닉네임·자기소개 (앞뒤 공백은 지운다) */
+    @Transactional
+    public User updateProfile(Long userId, ProfileUpdateRequest req) {
+        User user = get(userId);
+        user.changeProfile(req.nickname().strip(), req.bio() == null ? null : req.bio().strip());
+        return user;
+    }
+
+    /**
+     * 프로필 사진 바꾸기. 새 사진을 먼저 저장하고, 예전에 올린 사진 파일은 지운다.
+     * @throws IllegalArgumentException 그림이 아니거나 너무 큰 파일
+     */
+    @Transactional
+    public User changePhoto(Long userId, MultipartFile file) {
+        User user = get(userId);
+        String old = user.getProfileImageUrl();
+        user.changePhoto(profileImageStorage.store(file));
+        profileImageStorage.deleteIfOwned(old);
+        return user;
+    }
+
+    /** 프로필 사진 지우기 → 첫 글자 동그라미로 보인다 (카카오·구글 사진으로 다시 바뀌지 않음) */
+    @Transactional
+    public User removePhoto(Long userId) {
+        User user = get(userId);
+        String old = user.getProfileImageUrl();
+        user.changePhoto(null);
+        profileImageStorage.deleteIfOwned(old);
+        return user;
+    }
+
+    /**
+     * 비밀번호 바꾸기 (아이디 회원만).
+     * @throws IllegalArgumentException 지금 비밀번호가 틀림, 새 비밀번호 두 칸이 다름, 지금과 같은 비밀번호
+     * @throws IllegalStateException    카카오·구글 회원
+     */
+    @Transactional
+    public void changePassword(Long userId, PasswordChangeRequest req) {
+        User user = get(userId);
+        if (!user.isLocal()) {
+            throw new IllegalStateException("카카오·구글 회원은 비밀번호가 없어요.");
+        }
+        if (!passwordEncoder.matches(req.currentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("지금 비밀번호가 맞지 않아요.");
+        }
+        if (!req.passwordsMatch()) {
+            throw new IllegalArgumentException("새 비밀번호 두 칸이 서로 달라요.");
+        }
+        if (req.currentPassword().equals(req.newPassword())) {
+            throw new IllegalArgumentException("지금과 다른 비밀번호로 정해 주세요.");
+        }
+        user.changePassword(passwordEncoder.encode(req.newPassword()));
     }
 
     @Transactional
