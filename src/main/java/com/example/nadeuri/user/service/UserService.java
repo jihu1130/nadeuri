@@ -2,7 +2,7 @@ package com.example.nadeuri.user.service;
 
 import com.example.nadeuri.gathering.service.GatheringService;
 import com.example.nadeuri.user.domain.User;
-import com.example.nadeuri.user.dto.KakaoProfile;
+import com.example.nadeuri.user.dto.SocialProfile;
 import com.example.nadeuri.user.dto.SignUpRequest;
 import com.example.nadeuri.user.exception.DuplicateUsernameException;
 import com.example.nadeuri.user.repository.UserRepository;
@@ -21,16 +21,16 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final GatheringService gatheringService;
 
-    /** 카카오 로그인 성공 시: 처음이면 가입, 이미 있으면 프로필만 갱신 */
+    /** 소셜 로그인(카카오, 구글) 성공 시: 처음이면 가입, 이미 있으면 프로필만 갱신 */
     @Transactional
-    public User loginWithKakao(KakaoProfile profile) {
-        return repository.findByProviderAndProviderId(User.PROVIDER_KAKAO, profile.id())
+    public User loginWithSocial(SocialProfile profile) {
+        return repository.findByProviderAndProviderId(profile.provider(), profile.providerId())
                 .map(u -> {
                     u.updateProfile(profile.nickname(), profile.profileImageUrl());
                     return u;
                 })
-                .orElseGet(() -> repository.save(
-                        new User(User.PROVIDER_KAKAO, profile.id(), profile.nickname(), profile.profileImageUrl())));
+                .orElseGet(() -> repository.save(new User(
+                        profile.provider(), profile.providerId(), profile.nickname(), profile.profileImageUrl())));
     }
 
     /**

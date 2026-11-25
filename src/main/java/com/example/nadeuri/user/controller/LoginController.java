@@ -1,5 +1,6 @@
 package com.example.nadeuri.user.controller;
 
+import com.example.nadeuri.global.config.SecurityConfig;
 import com.example.nadeuri.global.security.LoginUser;
 import com.example.nadeuri.user.dto.SignUpRequest;
 import com.example.nadeuri.user.exception.DuplicateUsernameException;
@@ -19,16 +20,20 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 /**
  * 로그인·회원가입 화면.
  * - 아이디 로그인: 폼을 POST /login 으로 보내면 Spring Security가 처리한다 (SecurityConfig.formLogin)
- * - 카카오 로그인: /oauth2/authorization/kakao 로 이동하면 Spring Security가 처리한다
+ * - 카카오·구글 로그인: /oauth2/authorization/kakao, /oauth2/authorization/google 로 이동하면
+ *   Spring Security가 처리한다. 키가 설정된 서비스만 버튼을 보여 준다.
  */
 @Controller
 public class LoginController {
 
     private final boolean kakaoEnabled;
+    private final boolean googleEnabled;
     private final UserService userService;
 
     public LoginController(ObjectProvider<ClientRegistrationRepository> clients, UserService userService) {
-        this.kakaoEnabled = clients.getIfAvailable() != null;
+        ClientRegistrationRepository repo = clients.getIfAvailable();
+        this.kakaoEnabled = repo != null && repo.findByRegistrationId(SecurityConfig.KAKAO) != null;
+        this.googleEnabled = repo != null && repo.findByRegistrationId(SecurityConfig.GOOGLE) != null;
         this.userService = userService;
     }
 
@@ -36,6 +41,7 @@ public class LoginController {
     public String login(@AuthenticationPrincipal LoginUser user, Model model) {
         if (user != null) return "redirect:/";
         model.addAttribute("kakaoEnabled", kakaoEnabled);
+        model.addAttribute("googleEnabled", googleEnabled);
         return "login";
     }
 

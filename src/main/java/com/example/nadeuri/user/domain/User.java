@@ -12,6 +12,7 @@ import java.util.UUID;
 /**
  * 서비스 회원. 가입 경로(provider)와 그 경로에서의 식별값(providerId) 조합이 유일하다.
  * - 카카오:  provider = "kakao", providerId = 카카오 회원번호, password 없음
+ * - 구글:    provider = "google", providerId = 구글 sub(계정 고유번호), password 없음
  * - 우리 사이트: provider = "local", providerId = 아이디(소문자), password = BCrypt 해시
  * ("user"는 H2·일부 DB의 예약어라 테이블 이름은 users)
  */
@@ -24,6 +25,7 @@ public class User {
 
     public static final String PROVIDER_LOCAL = "local";
     public static final String PROVIDER_KAKAO = "kakao";
+    public static final String PROVIDER_GOOGLE = "google";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

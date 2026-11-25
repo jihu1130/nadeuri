@@ -52,6 +52,13 @@ kakao:
   rest-api-key: ${KAKAO_REST_API_KEY:}
   client-secret: ${KAKAO_CLIENT_SECRET:}
 
+google:
+  # 구글 로그인: Google Cloud Console > 사용자 인증 정보 > OAuth 클라이언트 ID(웹 애플리케이션).
+  # 둘 중 하나라도 비어 있으면 구글 로그인 버튼만 꺼진다.
+  # 승인된 리디렉션 URI로 http://localhost:8888/login/oauth2/code/google 을 등록해야 한다.
+  client-id: ${GOOGLE_CLIENT_ID:}
+  client-secret: ${GOOGLE_CLIENT_SECRET:}
+
 ---
 # MySQL 없이 테스트할 때: --spring.profiles.active=h2
 spring:

@@ -16,3 +16,9 @@ kakao:
   # 카카오 로그인 (플랫폼 키 > REST API 키, 같은 화면의 클라이언트 시크릿)
   rest-api-key: "카카오 REST API 키"
   client-secret: "카카오 클라이언트 시크릿"
+
+# 구글 로그인 (Google Cloud Console > API 및 서비스 > 사용자 인증 정보 > OAuth 클라이언트 ID, 웹 애플리케이션)
+# 승인된 리디렉션 URI: http://localhost:8888/login/oauth2/code/google
+google:
+  client-id: "구글 클라이언트 ID"
+  client-secret: "구글 클라이언트 보안 비밀번호"

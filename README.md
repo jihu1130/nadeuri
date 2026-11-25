@@ -21,7 +21,7 @@
 |---|---|
 | 언어 / 프레임워크 | Java 21, Spring Boot 3.3.5 (Web, Data JPA, Validation, Cache) |
 | 화면 | Thymeleaf, 순수 JavaScript, CSS |
-| 로그인 | Spring Security (아이디 폼 로그인, 비밀번호 BCrypt 해시) + OAuth2 Client (카카오 로그인) |
+| 로그인 | Spring Security (아이디 폼 로그인, 비밀번호 BCrypt 해시) + OAuth2 Client (카카오·구글 로그인) |
 | 지도 | 카카오맵 JavaScript SDK (지도, 장소 검색, 주소 변환) |
 | 날씨 | 기상청 API허브의 동네예보 조회서비스 `VilageFcstInfoService_2.0/getVilageFcst` |
 | DB | MySQL 8 (운영·로컬), H2 (테스트) |
@@ -50,6 +50,9 @@ kakao:
   javascript-key: "카카오 JavaScript 키"
   rest-api-key: "카카오 REST API 키"        # 로그인용
   client-secret: "카카오 클라이언트 시크릿"  # 로그인용
+google:
+  client-id: "구글 클라이언트 ID"            # 구글 로그인용
+  client-secret: "구글 클라이언트 보안 비밀번호"
 ```
 
 ### 3. 실행
@@ -90,7 +93,15 @@ kakao:
    - 클라이언트 시크릿: 사용함으로 두고 값을 복사합니다.
 3. **제품 설정 → 카카오 로그인 → 동의항목**에서 **닉네임(profile_nickname)**, **프로필 사진(profile_image)**을 설정합니다.
 4. REST API 키와 클라이언트 시크릿을 `application-local.yml`의 `kakao.rest-api-key`, `kakao.client-secret`에 넣고 앱을 다시 시작합니다.
-5. 키가 비어 있어도 앱은 뜹니다. 이때는 로그인 화면에 "설정되지 않았어요" 안내가 나오고, 모임 만들기와 참여만 할 수 없습니다.
+5. 키가 비어 있어도 앱은 뜹니다. 이때는 카카오 버튼만 나오지 않습니다. 소셜 로그인 키가 하나도 없으면 아이디 로그인만 쓸 수 있습니다.
+
+### 구글 로그인
+1. [Google Cloud Console](https://console.cloud.google.com/)에서 프로젝트를 만들고 **API 및 서비스 → OAuth 동의 화면**을 설정합니다. (사용자 유형: 외부)
+2. **사용자 인증 정보 → 사용자 인증 정보 만들기 → OAuth 클라이언트 ID**에서 유형을 **웹 애플리케이션**으로 고릅니다.
+3. **승인된 리디렉션 URI**에 `http://localhost:8888/login/oauth2/code/google`을 추가합니다.
+4. 클라이언트 ID와 클라이언트 보안 비밀번호를 `application-local.yml`의 `google.client-id`, `google.client-secret`에 넣고 앱을 다시 시작합니다.
+5. 요청하는 권한은 `profile`(이름·프로필 사진)뿐입니다. 이메일은 받지 않습니다.
+6. 동의 화면이 "테스트" 상태이면 **테스트 사용자로 등록한 계정만** 로그인할 수 있습니다. 둘 중 하나라도 비어 있으면 구글 버튼만 나오지 않습니다.
 
 ### 기상청 (API허브)
 1. [기상청 API허브](https://apihub.kma.go.kr)에 가입해서 인증키(authKey)를 발급받습니다.
@@ -111,6 +122,7 @@ kakao:
 | `KMA_SERVICE_KEY` | 기상청 인증키 |
 | `KAKAO_JS_KEY` | 카카오 JavaScript 키 |
 | `KAKAO_REST_API_KEY`, `KAKAO_CLIENT_SECRET` | 카카오 로그인용 키 (운영 도메인의 리다이렉트 URI도 따로 등록해야 합니다) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | 구글 로그인용 키 (운영 도메인의 리다이렉트 URI를 Google Cloud Console에 따로 등록해야 합니다. 운영은 HTTPS 필요) |
 | `DDL_AUTO` | 기본값은 `validate`입니다. 테이블은 앱이 뜰 때 Flyway가 `db/migration` 의 SQL로 만들고 바꿉니다 |
 
 ## 프로젝트 구조
@@ -131,16 +143,16 @@ nadeuri
 │  │  ├─ client                 KmaForecastClient (기상청 API 호출, 캐싱)
 │  │  ├─ domain                 KmaGrid (위경도→격자), WeatherInfo
 │  │  └─ dto                    WeatherResponse
-│  ├─ user                      회원 / 카카오 로그인
+│  ├─ user                      회원 / 카카오·구글 로그인
 │  │  ├─ controller             LoginController (/login, /signup 화면)
-│  │  ├─ service                UserService (아이디 가입, 카카오 가입·프로필 갱신),
-│  │  │                         LocalUserDetailsService (아이디 로그인), KakaoOAuth2UserService (카카오 로그인)
+│  │  ├─ service                UserService (아이디 가입, 소셜 가입·프로필 갱신),
+│  │  │                         LocalUserDetailsService (아이디 로그인), SocialOAuth2UserService (카카오·구글 로그인)
 │  │  ├─ repository             UserRepository
-│  │  ├─ domain                 User (엔티티, 테이블 이름 users. provider = local | kakao)
-│  │  ├─ dto                    SignUpRequest (가입 폼), KakaoProfile (카카오 응답 해석)
+│  │  ├─ domain                 User (엔티티, 테이블 이름 users. provider = local | kakao | google)
+│  │  ├─ dto                    SignUpRequest (가입 폼), SocialProfile (카카오·구글 응답 해석)
 │  │  └─ exception              DuplicateEmailException
 │  └─ global                    공통
-│     ├─ config                 SecurityConfig (접근 권한, 카카오 OAuth2), ViewModelAdvice (화면 공통 값: 카카오 키, 로그인 사용자)
+│     ├─ config                 SecurityConfig (접근 권한, 카카오·구글 OAuth2), ViewModelAdvice (화면 공통 값: 카카오 키, 로그인 사용자)
 │     ├─ security               LoginUser (세션에 저장되는 로그인 정보)
 │     ├─ util                   Times (KST 시간)
 │     └─ init                   SampleDataLoader (샘플 데이터)
@@ -160,11 +172,12 @@ nadeuri
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | GET | `/` | 홈 (지도 + 주변 모임) |
-| GET | `/login` | 로그인 화면 (아이디 로그인 폼, 카카오 로그인 버튼) |
+| GET | `/login` | 로그인 화면 (아이디 로그인 폼, 카카오·구글 로그인 버튼) |
 | POST | `/login` | 아이디 로그인 (`username`, `password`. Spring Security가 처리) |
 | GET | `/signup` | 회원가입 화면 |
 | POST | `/signup` | 회원가입 (`username`, `nickname`, `password`, `passwordConfirm`) |
 | GET | `/oauth2/authorization/kakao` | 카카오 로그인 시작 (Spring Security가 처리) |
+| GET | `/oauth2/authorization/google` | 구글 로그인 시작 (Spring Security가 처리) |
 | POST | `/logout` | 로그아웃 |
 | GET | `/gatherings/new` | 모임 만들기 화면 🔒 |
 | POST | `/gatherings` | 모임 생성 🔒 |
@@ -195,6 +208,7 @@ nadeuri
 - [x] 홈 화면 "지금 날씨"를 초단기실황(`getUltraSrtNcst`)으로 표시
 - [x] 카카오 로그인 (Spring Security OAuth2). 게스트 쿠키 대신 회원 ID로 참여 기록
 - [x] 아이디 + 비밀번호 회원가입·로그인
+- [x] 구글 로그인 (2026-11-25. 실제 구글 계정 확인은 키 설정 후)
 - [x] 지도에서 내 위치로 바로 이동 (지도 안 버튼, 위치 표시 강조, 위치 오류 안내)
 - [ ] 아이디 계정과 소셜 계정 연결, 비밀번호 찾기(이메일 등록 필요), 로그인 시도 횟수 제한
 - [x] 모임 상세에 주최자·참여자 목록, 내 모임 화면, 참여 취소, 모임 삭제

@@ -177,7 +177,7 @@ public class GatheringPageController {
     /**
      * 상세 화면의 "로그인하고 참여하기" 버튼용.
      * 로그인이 필요한 GET 주소라서 Spring Security가 이 주소를 기억해 두었다가
-     * 카카오 로그인이 끝나면 여기로 돌려보내고, 여기서 다시 상세 화면으로 보낸다.
+     * 로그인(아이디·카카오·구글)이 끝나면 여기로 돌려보내고, 여기서 다시 상세 화면으로 보낸다.
      */
     @GetMapping("/gatherings/{id}/sign-in")
     public String signInAndReturn(@PathVariable("id") UUID publicId) {

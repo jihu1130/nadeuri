@@ -1,7 +1,7 @@
 package com.example.nadeuri.global.config;
 
 import com.example.nadeuri.global.security.LoginUser;
-import com.example.nadeuri.user.service.KakaoOAuth2UserService;
+import com.example.nadeuri.user.service.SocialOAuth2UserService;
 import com.example.nadeuri.user.service.LoginAttemptService;
 import com.example.nadeuri.user.service.UserService;
 import jakarta.servlet.ServletException;
@@ -16,6 +16,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import org.springframework.security.config.oauth2.client.CommonOAuth2Provider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -43,21 +46,23 @@ import static org.springframework.security.web.util.matcher.AntPathRequestMatche
 /**
  * 로그인 정책
  * - 둘러보기(홈, 모임 상세, 조회 API)는 누구나 가능
- * - 모임 만들기, 참여하기는 로그인 필요 (아이디 로그인 또는 카카오 로그인)
+ * - 모임 만들기, 참여하기는 로그인 필요 (아이디 로그인, 카카오 로그인, 구글 로그인)
  *
- * 카카오 REST API 키가 비어 있으면 로그인 기능만 꺼진 채로 앱이 뜬다.
+ * 카카오·구글 키는 각각 비어 있으면 그 로그인 버튼만 꺼진 채로 앱이 뜬다.
  * (H2 콘솔이 켜지면 서블릿이 2개가 되어 문자열 매처가 모호해지므로 antMatcher를 쓴다)
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    /** 로그인 주소 /oauth2/authorization/{registrationId} 의 마지막 부분 */
     public static final String KAKAO = "kakao";
+    public static final String GOOGLE = "google";
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    ObjectProvider<ClientRegistrationRepository> clients,
-                                                   KakaoOAuth2UserService kakaoUserService,
+                                                   SocialOAuth2UserService socialUserService,
                                                    UserService userService,
                                                    LoginAttemptService loginAttempts) throws Exception {
         http
@@ -101,7 +106,7 @@ public class SecurityConfig {
         if (clients.getIfAvailable() != null) {
             http.oauth2Login(oauth -> oauth
                     .loginPage("/login")
-                    .userInfoEndpoint(u -> u.userService(kakaoUserService)));
+                    .userInfoEndpoint(u -> u.userService(socialUserService)));
         }
         return http.build();
     }
@@ -181,13 +186,45 @@ public class SecurityConfig {
         return cache;
     }
 
-    /** 카카오 REST API 키가 설정된 경우에만 등록한다 */
+    /**
+     * 소셜 로그인 등록. 키가 채워진 서비스만 등록하고, 하나도 없으면 이 빈 자체가 없다
+     * (그러면 oauth2Login도 꺼지고 아이디 로그인만 남는다).
+     */
     @Bean
-    @ConditionalOnExpression("!'${kakao.rest-api-key:}'.isBlank()")
+    @ConditionalOnExpression("!'${kakao.rest-api-key:}'.isBlank()"
+            + " or (!'${google.client-id:}'.isBlank() and !'${google.client-secret:}'.isBlank())")
     public ClientRegistrationRepository clientRegistrationRepository(
-            @Value("${kakao.rest-api-key}") String restApiKey,
-            @Value("${kakao.client-secret:}") String clientSecret) {
-        ClientRegistration kakao = ClientRegistration.withRegistrationId(KAKAO)
+            @Value("${kakao.rest-api-key:}") String kakaoRestApiKey,
+            @Value("${kakao.client-secret:}") String kakaoClientSecret,
+            @Value("${google.client-id:}") String googleClientId,
+            @Value("${google.client-secret:}") String googleClientSecret) {
+        List<ClientRegistration> registrations = new ArrayList<>();
+        if (!kakaoRestApiKey.isBlank()) {
+            registrations.add(kakao(kakaoRestApiKey, kakaoClientSecret));
+        }
+        if (!googleClientId.isBlank() && !googleClientSecret.isBlank()) {
+            registrations.add(google(googleClientId, googleClientSecret));
+        }
+        return new InMemoryClientRegistrationRepository(registrations);
+    }
+
+    /**
+     * 구글 로그인. 주소들은 Spring 기본값(CommonOAuth2Provider.GOOGLE)을 쓰되,
+     * 범위는 "profile"만 요청한다 (이름·사진만 필요하고 이메일은 받지 않는다).
+     * openid를 빼서 OIDC가 아닌 일반 OAuth2로 처리되므로 카카오와 같은 SocialOAuth2UserService를 탄다.
+     * 리다이렉트 URI: {baseUrl}/login/oauth2/code/google
+     */
+    private static ClientRegistration google(String clientId, String clientSecret) {
+        return CommonOAuth2Provider.GOOGLE.getBuilder(GOOGLE)
+                .clientName("구글")
+                .clientId(clientId)
+                .clientSecret(clientSecret)
+                .scope("profile")
+                .build();
+    }
+
+    private static ClientRegistration kakao(String restApiKey, String clientSecret) {
+        return ClientRegistration.withRegistrationId(KAKAO)
                 .clientName("카카오")
                 .clientId(restApiKey)
                 .clientSecret(clientSecret)
@@ -200,6 +237,5 @@ public class SecurityConfig {
                 .userInfoUri("https://kapi.kakao.com/v2/user/me")
                 .userNameAttributeName("id")
                 .build();
-        return new InMemoryClientRegistrationRepository(kakao);
     }
 }

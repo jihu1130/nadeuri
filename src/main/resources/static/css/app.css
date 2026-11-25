@@ -196,6 +196,10 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 .kakao-btn { display: flex; width: 100%; margin: 0; border-color: #fee500; background: #fee500; color: #24220e; }
 .kakao-btn:hover { border-color: #e8d300; background: #f5df00; }
 .kakao-unavailable { margin: 0 0 12px; text-align: center; }
+.social-logins { display: grid; gap: 8px; }
+.google-btn { display: flex; gap: 8px; width: 100%; margin: 0; border-color: #747775; background: #fff; color: #1f1f1f; }
+.google-btn:hover { border-color: #5f6368; background: #f8f9fa; }
+.google-mark { width: 18px; height: 18px; flex: none; }
 .browse-link { display: block; margin-top: 17px; color: #777267; font-size: 12px; text-align: center; text-decoration: underline; text-underline-offset: 3px; }
 .browse-link:hover { color: #5b4913; }
 .login-card .errors { margin: 12px 0 0; padding: 10px 12px; border: 1px solid #eed2cb; border-radius: 8px; background: #fff7f5; }
