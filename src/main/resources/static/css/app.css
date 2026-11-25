@@ -418,7 +418,6 @@ body.map-expanded { overflow: hidden; }
 
 /* 홈: 검색 결과 필터 (검색어 · 활동 종류 · 모집 중만) */
 .meetup-filters { display: flex; flex-direction: column; gap: 9px; padding: 11px 0 10px; border-bottom: 1px solid #f0ede6; }
-.meetup-filters[hidden] { display: none; }
 .filter-search { display: flex; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid #dedbd2; border-radius: 9px; background: #fff; color: #9a937f; }
 .filter-search:focus-within { border-color: #e1b831; box-shadow: 0 0 0 3px rgba(242,201,76,.25); }
 .filter-search input { min-height: 36px; padding: 0; border: 0; outline: 0; background: transparent; font-size: 13px; }

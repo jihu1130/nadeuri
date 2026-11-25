@@ -142,7 +142,7 @@ async function loadAt(lat, lng, isCurrent) {
     document.getElementById('listTitle').textContent = '주변 모임';
     document.getElementById('resultCount').textContent = '—';
     gatherings = [];
-    document.getElementById('meetupFilters').hidden = true;
+    renderTagFilter();
     renderError();
     return;
   }
@@ -185,7 +185,6 @@ function renderTagFilter() {
   document.getElementById('filterTags').innerHTML = chip('', '전체', gatherings.length)
     + [...counts].sort((a, b) => b[1].n - a[1].n)
         .map(([tag, c]) => chip(tag, `${esc(c.emoji)} ${esc(c.label)}`, c.n)).join('');
-  document.getElementById('meetupFilters').hidden = gatherings.length === 0;
 }
 
 function resetFilters() {
