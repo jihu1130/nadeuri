@@ -42,7 +42,10 @@
   </div>
   <form class="chat-form" id="chatForm" autocomplete="off">
     <label class="visually-hidden" for="chatInput">메시지</label>
-    <textarea id="chatInput" rows="1" maxlength="500" placeholder="메시지 입력" title="Enter: 보내기 · Shift+Enter: 줄바꿈"></textarea>
+    <!--/* "@" 뒤에 글자를 치면 뜨는 참여자 목록 (chat-room.js) */-->
+    <ul class="chat-mentions" id="chatMentions" role="listbox" aria-label="부를 참여자" hidden></ul>
+    <textarea id="chatInput" rows="1" maxlength="500" placeholder="메시지 입력 (@로 참여자 부르기)" title="Enter: 보내기 · Shift+Enter: 줄바꿈 · @: 참여자 부르기"
+              role="combobox" aria-autocomplete="list" aria-controls="chatMentions" aria-expanded="false"></textarea>
     <button class="btn" type="submit" id="chatSend" disabled>보내기</button>
   </form>
   <p class="chat-error" id="chatError" role="alert" hidden></p>

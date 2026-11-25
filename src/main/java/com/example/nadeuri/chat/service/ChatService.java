@@ -2,6 +2,7 @@ package com.example.nadeuri.chat.service;
 
 import com.example.nadeuri.chat.domain.ChatMessage;
 import com.example.nadeuri.chat.domain.ChatMessageRevision;
+import com.example.nadeuri.chat.dto.ChatMemberView;
 import com.example.nadeuri.chat.dto.ChatMessageView;
 import com.example.nadeuri.chat.dto.ChatRevisionView;
 import com.example.nadeuri.chat.dto.ChatTypist;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -66,6 +68,18 @@ public class ChatService {
     /** 지금 채팅할 수 있는 회원 id들. 참여를 취소한 사람에게 새 메시지가 가지 않게 보낼 때마다 확인한다 */
     public Set<Long> members(Long gatheringId) {
         return new HashSet<>(participantRepository.findUserIdsByGatheringId(gatheringId));
+    }
+
+    /**
+     * 채팅방 참여자 목록 (@멘션 자동완성용). 닉네임 가나다순.
+     * @throws NotParticipantException 참여자가 아님
+     */
+    public List<ChatMemberView> memberViews(Long gatheringId, Long userId) {
+        checkCanChat(gatheringId, userId);
+        return userRepository.findAllById(participantRepository.findUserIdsByGatheringId(gatheringId)).stream()
+                .map(u -> new ChatMemberView(u.getPublicId(), u.getNickname(), u.getProfileImageUrl()))
+                .sorted(Comparator.comparing(ChatMemberView::nickname))
+                .toList();
     }
 
     private void checkCanChat(Long gatheringId, Long userId) {

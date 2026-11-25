@@ -36,6 +36,18 @@
 .chat-msg.is-mine .chat-line { flex-direction: row-reverse; }
 .chat-msg.is-mine .chat-bubble { border-color: var(--yellow); border-radius: 14px 4px 14px 14px; background: var(--yellow-soft); }
 
+/* @멘션: 말풍선 안 "@닉네임" 강조, 나를 부른 메시지는 말풍선 테두리를 진하게 */
+.chat-mention { padding: 0 2px; border-radius: 4px; color: #8a5d00; font-weight: 700; }
+.chat-mention.is-me { background: #ffe7a3; color: #6b4300; }
+.chat-msg.is-mention-me .chat-bubble { border-color: #e6b94a; box-shadow: 0 0 0 2px rgba(242, 201, 76, .35); }
+/* 입력칸 위에 뜨는 참여자 목록 */
+.chat-form { position: relative; }
+.chat-mentions { position: absolute; right: 12px; bottom: calc(100% + 6px); left: 12px; z-index: 5; max-width: 320px; margin: 0; padding: 4px; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #fff; box-shadow: 0 10px 28px rgba(60, 50, 20, .16); list-style: none; }
+.chat-mentions[hidden] { display: none; }
+.chat-mention-option { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px; color: #3d3a31; font-size: 13px; font-weight: 600; cursor: pointer; }
+.chat-mention-option.is-active, .chat-mention-option:hover { background: var(--yellow-wash); }
+.chat-mention-avatar { display: grid; width: 24px; height: 24px; flex: none; place-items: center; border-radius: 50%; background: var(--yellow-soft); color: #6b5512; font-size: 11px; font-weight: 750; object-fit: cover; }
+
 /* 지운 메시지: 흐린 기울임 글씨 */
 .chat-msg.is-deleted .chat-bubble,
 .chat-msg.is-mine.is-deleted .chat-bubble { border-color: var(--line); background: #f6f4ee; color: #9a9585; font-style: italic; }

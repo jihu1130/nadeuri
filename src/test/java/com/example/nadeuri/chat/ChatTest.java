@@ -306,6 +306,32 @@ class ChatTest {
     }
 
     @Test
+    void 멘션용_참여자_목록은_참여자에게만_공개_UUID와_닉네임으로_준다() throws Exception {
+        User host = user("하늘");
+        User a = user("가람");
+        Gathering g = gathering(host);
+        gatherings.join(g.getId(), a.getId());
+
+        var list = chat.memberViews(g.getId(), a.getId());
+        assertThat(list).extracting(m -> m.nickname()).containsExactly("가람", "하늘");   // 가나다순
+        assertThat(list).extracting(m -> m.userId()).containsExactlyInAnyOrder(a.getPublicId(), host.getPublicId());
+
+        String url = "/api/gatherings/" + g.getPublicId() + "/chat/members";
+        mvc.perform(get(url).with(oauth2Login().oauth2User(login(host))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].nickname").value("가람"))
+                .andExpect(jsonPath("$[0].userId").value(a.getPublicId()))
+                .andExpect(jsonPath("$[0].id").doesNotExist());
+        mvc.perform(get(url).with(oauth2Login().oauth2User(login(user("구경꾼"))))).andExpect(status().isForbidden());
+        mvc.perform(get(url)).andExpect(status().isForbidden());
+
+        // 참여를 취소하면 목록에서 빠지고, 그 사람은 목록을 볼 수 없다
+        gatherings.leave(g.getId(), a.getId());
+        assertThat(chat.memberViews(g.getId(), host.getId())).extracting(m -> m.nickname()).containsExactly("하늘");
+        assertThatThrownBy(() -> chat.memberViews(g.getId(), a.getId())).isInstanceOf(NotParticipantException.class);
+    }
+
+    @Test
     void 모임을_지우면_메시지의_수정_기록도_함께_지운다() {
         User host = user("주최");
         Gathering g = gathering(host);

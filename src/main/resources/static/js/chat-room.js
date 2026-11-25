@@ -16,6 +16,8 @@ const ME = shell.dataset.me || null;              // 내 공개 UUID
  * 7) 수정: "수정"을 누르면 입력칸에 원래 내용이 들어가고(위에 "메시지 수정 중"), 보내면 {"type":"edit","id","content"}.
  *    서버가 {"type":"edited","message"}를 보내면 내용을 바꾸고 "수정됨"을 붙인다. "수정됨"을 누르면
  *    GET /api/gatherings/{id}/messages/{메시지 id}/revisions 로 이전 내용을 보여 준다 (참여자 누구나).
+ * 8) @멘션: GET /api/gatherings/{id}/chat/members 로 참여자를 받아, 입력칸에서 "@" 뒤에 글자를 치면 목록을 띄운다.
+ *    말풍선의 "@닉네임"은 강조하고, 나를 부른 메시지는 줄 전체를 노랗게 표시한다. 서버는 글을 그대로 저장한다.
  */
 const $ = id => document.getElementById(id);
 const log = $('chatLog'), list = $('chatList'), input = $('chatInput'), sendBtn = $('chatSend');
@@ -161,6 +163,147 @@ function scrollToBottom() {
   log.scrollTop = log.scrollHeight;
 }
 
+/* ----- @멘션: 참여자 목록, 말풍선 안 강조, 입력칸 자동완성 ----- */
+let members = [];          // [{ userId, nickname, profileImageUrl }] (닉네임 가나다순)
+let myNickname = null;
+
+async function loadMembers() {
+  try {
+    const r = await fetch(`/api/gatherings/${GATHERING_ID}/chat/members`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    if (!r.ok) return;
+    members = await r.json();
+    myNickname = members.find(m => m.userId === ME)?.nickname ?? null;
+    // 닉네임이 바뀌었거나 새로 들어온 사람이 있을 수 있으니 이미 그린 말풍선도 다시 강조한다
+    list.querySelectorAll('.chat-msg:not(.is-deleted)').forEach(row => {
+      const bubble = row.querySelector('.chat-bubble');
+      fillBubble(row, bubble, bubble.textContent);
+    });
+  } catch { /* 자동완성만 안 될 뿐 채팅은 된다 */ }
+}
+
+/**
+ * 말풍선 글 채우기. "@닉네임"이 참여자 닉네임과 맞으면 강조한다 (띄어쓰기가 있는 닉네임도 가장 긴 것부터 맞춘다).
+ * 사용자 글은 텍스트 노드로만 넣는다 (HTML로 해석되지 않게). 나를 부른 메시지면 줄에 is-mention-me.
+ */
+function fillBubble(row, bubble, text) {
+  bubble.textContent = '';
+  const names = [...new Set(members.map(m => m.nickname).filter(Boolean))].sort((a, b) => b.length - a.length);
+  let mentionsMe = false, plain = '', i = 0;
+  while (i < text.length) {
+    const at = text[i] === '@' && (i === 0 || /\s/.test(text[i - 1]));
+    const name = at ? names.find(n => text.startsWith(n, i + 1)) : null;
+    if (name) {
+      if (plain) bubble.appendChild(document.createTextNode(plain));
+      plain = '';
+      const span = document.createElement('span');
+      span.className = 'chat-mention' + (name === myNickname ? ' is-me' : '');
+      span.textContent = '@' + name;
+      bubble.appendChild(span);
+      if (name === myNickname) mentionsMe = true;
+      i += name.length + 1;
+    } else {
+      plain += text[i++];
+    }
+  }
+  if (plain) bubble.appendChild(document.createTextNode(plain));
+  row.classList.toggle('is-mention-me', mentionsMe && !row.classList.contains('is-mine'));
+}
+
+// 자동완성: 입력칸에서 "@" 뒤에 글자를 치면 참여자 목록이 뜬다 (↑↓ 고르기, Enter·Tab 넣기, Esc 닫기)
+const mentionBox = $('chatMentions');
+let mentionStart = -1, mentionItems = [], mentionIndex = 0;
+
+function updateMentions() {
+  const caret = input.selectionStart;
+  const before = input.value.slice(0, caret);
+  const m = /(^|\s)@([^\s@]{0,20})$/.exec(before);
+  if (!m || input.selectionStart !== input.selectionEnd) return closeMentions();
+  const query = m[2].toLowerCase();
+  mentionItems = members
+    .filter(x => x.userId !== ME && x.nickname && x.nickname.toLowerCase().includes(query))
+    .sort((a, b) => (b.nickname.toLowerCase().startsWith(query) ? 1 : 0) - (a.nickname.toLowerCase().startsWith(query) ? 1 : 0))
+    .slice(0, 6);
+  if (!mentionItems.length) return closeMentions();
+  mentionStart = caret - m[2].length - 1;
+  mentionIndex = 0;
+  renderMentions();
+}
+
+function renderMentions() {
+  mentionBox.textContent = '';
+  mentionItems.forEach((x, i) => {
+    const li = document.createElement('li');
+    li.className = 'chat-mention-option' + (i === mentionIndex ? ' is-active' : '');
+    li.id = `chatMention${i}`;
+    li.setAttribute('role', 'option');
+    li.setAttribute('aria-selected', String(i === mentionIndex));
+    const avatar = document.createElement(x.profileImageUrl ? 'img' : 'span');
+    avatar.className = 'chat-mention-avatar';
+    if (x.profileImageUrl) {
+      avatar.src = x.profileImageUrl;
+      avatar.alt = '';
+      avatar.referrerPolicy = 'no-referrer';
+    } else {
+      avatar.textContent = x.nickname.slice(0, 1);
+      avatar.setAttribute('aria-hidden', 'true');
+    }
+    const name = document.createElement('span');
+    name.textContent = x.nickname;
+    li.append(avatar, name);
+    // mousedown: 입력칸 초점을 잃기 전에 고른다
+    li.addEventListener('mousedown', e => {
+      e.preventDefault();
+      pickMention(i);
+    });
+    mentionBox.appendChild(li);
+  });
+  mentionBox.hidden = false;
+  input.setAttribute('aria-expanded', 'true');
+  input.setAttribute('aria-activedescendant', `chatMention${mentionIndex}`);
+}
+
+function closeMentions() {
+  if (mentionBox.hidden) return;
+  mentionBox.hidden = true;
+  mentionBox.textContent = '';
+  mentionItems = [];
+  mentionStart = -1;
+  input.setAttribute('aria-expanded', 'false');
+  input.removeAttribute('aria-activedescendant');
+}
+
+function pickMention(i) {
+  const x = mentionItems[i];
+  if (!x || mentionStart < 0) return;
+  const caret = input.selectionStart;
+  const insert = '@' + x.nickname + ' ';
+  input.value = input.value.slice(0, mentionStart) + insert + input.value.slice(caret);
+  const pos = mentionStart + insert.length;
+  input.setSelectionRange(pos, pos);
+  closeMentions();
+  autosize();
+  updateSendButton();
+  input.focus();
+}
+
+/** 자동완성이 열려 있을 때의 키. 처리했으면 true */
+function mentionKey(e) {
+  if (mentionBox.hidden || e.isComposing) return false;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const step = e.key === 'ArrowDown' ? 1 : -1;
+    mentionIndex = (mentionIndex + step + mentionItems.length) % mentionItems.length;
+    renderMentions();
+  } else if (e.key === 'Enter' || e.key === 'Tab') {
+    pickMention(mentionIndex);
+  } else if (e.key === 'Escape') {
+    closeMentions();
+  } else {
+    return false;
+  }
+  e.preventDefault();
+  return true;
+}
+
 const DELETED_TEXT = '삭제된 메시지예요';
 
 /** 말풍선을 "삭제된 메시지"로 바꾼다 (수정·삭제 버튼과 "수정됨"도 없앤다) */
@@ -168,7 +311,7 @@ function markDeleted(row) {
   if (!row || row.classList.contains('is-deleted')) return;
   if (editing && editing.row === row) cancelEdit();
   row.classList.add('is-deleted');
-  row.classList.remove('show-actions');
+  row.classList.remove('show-actions', 'is-mention-me');
   row.querySelector('.chat-bubble').textContent = DELETED_TEXT;
   row.querySelector('.chat-actions')?.remove();
   row.querySelector('.chat-edited')?.remove();
@@ -178,7 +321,7 @@ function markDeleted(row) {
 function markEdited(m) {
   const row = list.querySelector(`.chat-msg[data-id="${Number(m.id)}"]`);
   if (!row || row.classList.contains('is-deleted')) return;
-  row.querySelector('.chat-bubble').textContent = m.content;
+  fillBubble(row, row.querySelector('.chat-bubble'), m.content);
   if (!row.querySelector('.chat-edited')) row.querySelector('.chat-meta').prepend(editedButton(m.id));
 }
 
@@ -365,8 +508,12 @@ function messageEl(m) {
   line.className = 'chat-line';
   const bubble = document.createElement('p');
   bubble.className = 'chat-bubble';
-  bubble.textContent = m.deleted ? DELETED_TEXT : m.content;
-  if (m.deleted) row.classList.add('is-deleted');
+  if (m.deleted) {
+    bubble.textContent = DELETED_TEXT;
+    row.classList.add('is-deleted');
+  } else {
+    fillBubble(row, bubble, m.content);
+  }
   const time = document.createElement('time');
   time.className = 'chat-time';
   time.dateTime = m.createdAt;
@@ -482,6 +629,8 @@ function connect() {
     const data = JSON.parse(e.data);
     if (data.type === 'message') {
       const stick = nearBottom() || data.message.userId === ME;
+      // 처음 보는 사람(새로 참여)이면 @멘션 목록을 새로 받는다
+      if (data.message.userId && !members.some(x => x.userId === data.message.userId)) loadMembers();
       add([data.message], 'bottom');
       removeTypist(data.message.userId);   // 보냈으면 더 이상 입력 중이 아님
       if (stick) scrollToBottom();
@@ -571,6 +720,7 @@ function autosize() {
 
 $('chatForm').addEventListener('submit', e => { e.preventDefault(); send(); });
 input.addEventListener('keydown', e => {
+  if (mentionKey(e)) return;   // @멘션 목록이 열려 있으면 ↑↓·Enter·Tab·Esc는 목록용
   // 한글 입력 조합 중의 Enter는 보내지 않는다 (마지막 글자가 두 번 가는 문제 방지)
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
     e.preventDefault();
@@ -588,15 +738,25 @@ input.addEventListener('input', () => {
   autosize();
   updateSendButton();
   noteMyTyping();
+  updateMentions();
+});
+// 커서를 옮기면 그 자리 기준으로 @멘션 목록을 다시 본다
+input.addEventListener('click', updateMentions);
+input.addEventListener('keyup', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home' || e.key === 'End') updateMentions();
 });
 // 다른 곳을 누르거나 탭을 떠나면 "입력 중"을 멈춘다
-input.addEventListener('blur', stopMyTyping);
+input.addEventListener('blur', () => {
+  stopMyTyping();
+  closeMentions();
+});
 window.addEventListener('pagehide', stopMyTyping);
 // 탭을 다시 보면 끊긴 연결을 바로 다시 시도
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && socket && socket.readyState === WebSocket.CLOSED && retryTimer && retry > 0) connect();
 });
 
+loadMembers();
 loadLatest()
   .catch(err => showError(err.message === 'forbidden'
     ? '이 모임 채팅에 참여할 수 없어요.' : '지난 메시지를 불러오지 못했어요.'))
