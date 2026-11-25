@@ -278,6 +278,19 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 @keyframes research-in { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @media (max-width: 520px) { .research-button { top: 56px; padding: 8px 13px; font-size: 12px; } }
 @media (prefers-reduced-motion: reduce) { .research-button { animation: none; } }
+/* 다시 검색할 기준점(지도 가운데)을 가리키는 깃발 — 버튼이 떠 있는 동안만 보임 */
+.research-flag { width: 32px; height: 40px; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(40,35,15,.25));
+  transform-origin: 22% 95%; animation: research-flag-in .22s ease-out; }
+.research-flag svg { display: block; }
+@keyframes research-flag-in { from { opacity: 0; transform: translateY(-8px) scale(.85); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .research-flag { animation: none; } }
+/* 다시 검색한 기준점 — 내 위치(파란 점)와 구분되는 주황 점 + 옅은 테두리 */
+.search-center-marker { position: relative; width: 26px; height: 26px; pointer-events: none; }
+.search-center-marker::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: rgba(226,106,62,.2); border: 1.5px solid rgba(226,106,62,.55); }
+.search-center-dot { position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; transform: translate(-50%, -50%);
+  border: 2.5px solid #fff; border-radius: 50%; background: #e26a3e; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.legend-search-center { display: inline-block; width: 9px; height: 9px; flex: 0 0 9px; border: 2px solid #fff; border-radius: 50%; background: #e26a3e; box-shadow: 0 0 0 1px #e26a3e; }
+.map-legend span[hidden] { display: none; }
 
 /* 모임 상세: 참여자 목록 */
 .participants-card .card-heading { margin-bottom: 12px; }
@@ -389,3 +402,34 @@ body.map-expanded { overflow: hidden; }
 .form-foot { margin-top: 12px; text-align: center; }
 .weather-now { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
 .directions-link { margin-top: 10px; }
+
+/* 홈: 위쪽 "내 위치에서 다시 검색" 버튼 (반경 선택 옆) */
+.locate-search-button { display: inline-flex; min-height: 40px; align-items: center; gap: 6px; padding: 0 13px; border: 1px solid #e1b831;
+  border-radius: 9px; background: var(--yellow-soft); color: #5a4710; font: inherit; font-size: 12px; font-weight: 750; white-space: nowrap; cursor: pointer; }
+.locate-search-button:hover { background: var(--yellow); }
+.locate-search-button:focus-visible { outline: 3px solid rgba(225,184,49,.5); outline-offset: 2px; }
+.locate-search-button:disabled { cursor: wait; opacity: .7; }
+.locate-search-button.is-loading svg { animation: locate-spin 1s linear infinite; }
+@keyframes locate-spin { to { transform: rotate(360deg); } }
+@media (max-width: 560px) {
+  .discover-controls { flex-wrap: wrap; }
+  .locate-search-button { min-height: 38px; padding: 0 11px; font-size: 11px; }
+}
+
+/* 홈: 검색 결과 필터 (검색어 · 활동 종류 · 모집 중만) */
+.meetup-filters { display: flex; flex-direction: column; gap: 9px; padding: 11px 0 10px; border-bottom: 1px solid #f0ede6; }
+.meetup-filters[hidden] { display: none; }
+.filter-search { display: flex; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid #dedbd2; border-radius: 9px; background: #fff; color: #9a937f; }
+.filter-search:focus-within { border-color: #e1b831; box-shadow: 0 0 0 3px rgba(242,201,76,.25); }
+.filter-search input { min-height: 36px; padding: 0; border: 0; outline: 0; background: transparent; font-size: 13px; }
+.filter-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.filter-tags { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.filter-chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px;
+  background: #fff; color: #5e594d; font: inherit; font-size: 11px; font-weight: 650; white-space: nowrap; cursor: pointer; }
+.filter-chip:hover { border-color: #e4d59f; background: var(--yellow-wash); }
+.filter-chip.is-active { border-color: #e1b831; background: var(--yellow); color: #3c3217; }
+.filter-chip:focus-visible { outline: 3px solid rgba(225,184,49,.5); outline-offset: 1px; }
+.filter-chip-count { color: #9a937f; font-size: 10px; font-weight: 700; }
+.filter-chip.is-active .filter-chip-count { color: #6b5512; }
+.filter-open { display: inline-flex; flex: none; align-items: center; gap: 5px; padding-top: 5px; color: #5e594d; font-size: 11px; font-weight: 650; white-space: nowrap; cursor: pointer; }
+.filter-open input { width: 14px; height: 14px; min-height: 0; margin: 0; padding: 0; accent-color: #d9a91f; cursor: pointer; }

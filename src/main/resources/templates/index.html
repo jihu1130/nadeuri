@@ -45,6 +45,14 @@
             <option value="20000">반경 20km</option>
           </select>
         </label>
+        <!--/* 위치를 새로 찾고, 그 자리를 기준으로 모임을 다시 검색 (지도도 내 위치로 이동) */-->
+        <button type="button" class="locate-search-button" id="myLocationSearchButton">
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>
+            <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>
+          </svg>
+          <span>내 위치에서 다시 검색</span>
+        </button>
       </div>
     </div>
 
@@ -55,6 +63,8 @@
           <div class="map-legend" aria-label="지도 표시 안내">
             <span><i class="legend-pin" aria-hidden="true">●</i> 주변 모임</span>
             <span><i class="legend-you" aria-hidden="true"></i> 내 위치</span>
+            <!--/* 지도에서 고른 지역(또는 기본 위치)으로 검색했을 때만 보임 */-->
+            <span id="legendSearchCenter" hidden><i class="legend-search-center" aria-hidden="true"></i> 검색 기준</span>
           </div>
           <span class="map-hint">핀을 누르면 모임 정보가 표시됩니다</span>
           <!--/* 지도를 화면 전체로 키우는 버튼 (같은 지도를 그대로 확대 표시, Esc로 닫기) */-->
@@ -82,6 +92,17 @@
 
       <section class="meetup-panel" aria-labelledby="listTitle">
         <div class="meetup-heading"><div><p class="eyebrow section-eyebrow">검색 결과</p><h2 id="listTitle">모임 목록</h2></div><span class="result-count" id="resultCount">—</span></div>
+        <!--/* 검색 결과 필터: 검색어(모임 이름·장소), 활동 종류(결과에 있는 종류만 표시), 모집 중만. 지도 핀에도 같이 적용 */-->
+        <div class="meetup-filters" id="meetupFilters" hidden>
+          <label class="filter-search">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>
+            <input type="search" id="filterKeyword" placeholder="모임 이름·장소 검색" aria-label="모임 이름이나 장소로 검색" autocomplete="off">
+          </label>
+          <div class="filter-row">
+            <div class="filter-tags" id="filterTags" role="group" aria-label="활동 종류"></div>
+            <label class="filter-open"><input type="checkbox" id="filterOpenOnly"> 모집 중만</label>
+          </div>
+        </div>
         <div id="list" class="meetup-list" aria-live="polite"><div class="list-state"><span class="loading-spinner"></span><p>모임 목록을 불러오는 중입니다.</p></div></div>
         <div class="list-footer"><span>원하는 모임이 없으면 직접 등록하세요.</span><a href="/gatherings/new">모임 등록 <span aria-hidden="true">→</span></a></div>
       </section>

@@ -127,7 +127,7 @@ async function loadAt(lat, lng, isCurrent) {
     : isCurrent
       ? `현재 위치 기준 · 반경 ${radius / 1000}km`
       : `현재 위치를 확인하지 못해 여의도 기준으로 검색 · 반경 ${radius / 1000}km`;
-  drawSearchArea(lat, lng);
+  drawSearchArea(lat, lng, isCurrent);
   hideResearchButton();
   document.getElementById('listTitle').textContent = '모임 목록';
   document.getElementById('resultCount').textContent = '…';
@@ -141,12 +141,69 @@ async function loadAt(lat, lng, isCurrent) {
   if (gatheringsResult.status !== 'fulfilled') {
     document.getElementById('listTitle').textContent = '주변 모임';
     document.getElementById('resultCount').textContent = '—';
+    gatherings = [];
+    document.getElementById('meetupFilters').hidden = true;
     renderError();
     return;
   }
-  const gatherings = gatheringsResult.value;
+  gatherings = gatheringsResult.value;
+  renderTagFilter();
+  renderGatherings();
+}
+
+/* ===== 검색 결과 필터 =====
+ * 받아 온 모임 목록 안에서 검색어·활동 종류·모집 중 여부로 걸러 목록과 지도 핀에 함께 적용한다.
+ * (다시 불러오지 않고 화면에서만 거른다. 다시 검색해도 고른 필터는 유지된다)
+ */
+let gatherings = [];
+const filters = { keyword: '', tag: '', openOnly: false };
+
+function isFiltering() {
+  return Boolean(filters.keyword || filters.tag || filters.openOnly);
+}
+function matchesFilter(g) {
+  if (filters.tag && g.tag !== filters.tag) return false;
+  if (filters.openOnly && g.status !== 'RECRUITING') return false;
+  if (filters.keyword) {
+    const text = `${g.title} ${g.placeName} ${g.tagLabel}`.toLowerCase();
+    if (!text.includes(filters.keyword)) return false;
+  }
+  return true;
+}
+
+// 활동 종류 버튼: 지금 결과에 있는 종류만, 많은 순으로 보여 준다
+function renderTagFilter() {
+  const counts = new Map();
+  gatherings.forEach(g => {
+    const c = counts.get(g.tag) || { label: g.tagLabel, emoji: g.emoji, n: 0 };
+    c.n++;
+    counts.set(g.tag, c);
+  });
+  if (filters.tag && !counts.has(filters.tag)) filters.tag = ''; // 고른 종류가 새 결과에 없으면 전체로
+  const chip = (tag, text, n) =>
+    `<button type="button" class="filter-chip${filters.tag === tag ? ' is-active' : ''}" data-tag="${esc(tag)}" aria-pressed="${filters.tag === tag}">${text}<span class="filter-chip-count">${n}</span></button>`;
+  document.getElementById('filterTags').innerHTML = chip('', '전체', gatherings.length)
+    + [...counts].sort((a, b) => b[1].n - a[1].n)
+        .map(([tag, c]) => chip(tag, `${esc(c.emoji)} ${esc(c.label)}`, c.n)).join('');
+  document.getElementById('meetupFilters').hidden = gatherings.length === 0;
+}
+
+function resetFilters() {
+  filters.keyword = '';
+  filters.tag = '';
+  filters.openOnly = false;
+  document.getElementById('filterKeyword').value = '';
+  document.getElementById('filterOpenOnly').checked = false;
+  renderTagFilter();
+  renderGatherings();
+}
+
+function renderGatherings() {
   document.getElementById('listTitle').textContent = `반경 ${radius / 1000}km 모임`;
-  document.getElementById('resultCount').textContent = `${gatherings.length}개`;
+  const shown = gatherings.filter(matchesFilter);
+  document.getElementById('resultCount').textContent = isFiltering() && gatherings.length
+    ? `${shown.length}/${gatherings.length}개`
+    : `${gatherings.length}개`;
   document.getElementById('list').innerHTML = '';
   overlays.forEach(o => o.setMap(null));
   overlays = [];
@@ -156,7 +213,12 @@ async function loadAt(lat, lng, isCurrent) {
     renderEmpty(`반경 ${radius / 1000}km 안에 예정된 모임이 없습니다.`, '검색 반경을 넓히거나 새 모임을 등록하세요.');
     return;
   }
-  gatherings.forEach(g => {
+  if (!shown.length) {
+    document.getElementById('list').innerHTML = '<div class="list-state empty-state"><span class="empty-sun" aria-hidden="true">?</span><strong>조건에 맞는 모임이 없습니다</strong><p>검색어나 필터를 바꿔 보세요.</p><button type="button" class="retry-button" id="resetFiltersButton">필터 초기화</button></div>';
+    document.getElementById('resetFiltersButton').addEventListener('click', resetFilters);
+    return;
+  }
+  shown.forEach(g => {
     let pos = null;
     let info = null;
     const item = document.createElement('a');
@@ -218,21 +280,63 @@ function focusGathering(pos, info, item) {
 let userMovedMap = false;
 let searchCircle = null;
 
-// 검색한 범위를 옅은 원으로 보여 준다
-function drawSearchArea(lat, lng) {
+let searchCenterOverlay = null;
+
+// 검색한 범위를 옅은 원으로 보여 준다.
+// 내 위치가 아닌 곳(지도에서 고른 지역·기본 위치)을 기준으로 찾았으면 그 기준점에 주황 점을 찍어 둔다.
+function drawSearchArea(lat, lng, isCurrent) {
   if (!map) return;
   if (searchCircle) searchCircle.setMap(null);
+  const center = new kakao.maps.LatLng(lat, lng);
   searchCircle = new kakao.maps.Circle({
-    center: new kakao.maps.LatLng(lat, lng), radius,
+    center, radius,
     strokeWeight: 1.5, strokeColor: '#c99a1e', strokeOpacity: 0.55, strokeStyle: 'shortdash',
     fillColor: '#f2c94c', fillOpacity: 0.06
   });
   searchCircle.setMap(map);
+
+  searchCenterOverlay?.setMap(null);
+  const showCenter = isCurrent !== true; // 내 위치 기준이면 파란 점이 이미 그 자리를 보여 준다
+  document.getElementById('legendSearchCenter').hidden = !showCenter;
+  if (!showCenter) return;
+  if (!searchCenterOverlay) {
+    const el = document.createElement('div');
+    el.className = 'search-center-marker';
+    el.title = '검색 기준 위치';
+    el.innerHTML = '<span class="search-center-dot"></span>';
+    searchCenterOverlay = new kakao.maps.CustomOverlay({ content: el, zIndex: 4 });
+  }
+  searchCenterOverlay.setPosition(center);
+  searchCenterOverlay.setMap(map);
 }
 
 function hideResearchButton() {
   userMovedMap = false;
   document.getElementById('researchButton').hidden = true;
+  syncResearchFlag();
+}
+
+/* 다시 검색할 기준점(지금 지도 가운데)을 깃발로 보여 준다.
+ * 버튼이 떠 있는 동안만 보이고, 지도를 움직이면 가운데를 따라간다. */
+let researchFlag = null;
+function syncResearchFlag() {
+  if (!map) return;
+  const visible = !document.getElementById('researchButton').hidden;
+  if (!visible) { researchFlag?.setMap(null); return; }
+  if (!researchFlag) {
+    const el = document.createElement('div');
+    el.className = 'research-flag';
+    el.title = '다시 검색할 위치';
+    el.innerHTML = '<svg viewBox="0 0 32 40" width="32" height="40" aria-hidden="true">'
+      + '<ellipse cx="7" cy="38" rx="5" ry="1.8" fill="rgba(40,35,15,.28)"/>'
+      + '<path d="M7 38V4" stroke="#5c5542" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<path d="M8 4.5h19l-5 6.5 5 6.5H8z" fill="#f2c94c" stroke="#c99a1e" stroke-width="1.4" stroke-linejoin="round"/>'
+      + '</svg>';
+    // 깃대 아래 끝(x=7/32, y=38/40)이 정확히 지도 가운데에 오도록 기준점을 맞춘다
+    researchFlag = new kakao.maps.CustomOverlay({ content: el, xAnchor: 7 / 32, yAnchor: 38 / 40, zIndex: 6 });
+  }
+  researchFlag.setPosition(map.getCenter());
+  if (!researchFlag.getMap()) researchFlag.setMap(map);
 }
 
 // 지도 가운데와 검색 기준점 사이 거리(m)
@@ -248,6 +352,7 @@ function distanceFromSearch() {
 function updateResearchButton() {
   if (!map || !userMovedMap) return;
   document.getElementById('researchButton').hidden = distanceFromSearch() < Math.max(300, radius * 0.15);
+  syncResearchFlag();
 }
 
 function researchHere() {
@@ -261,7 +366,7 @@ function researchHere() {
 
 // 첫 화면에서 현재 위치를 확인하고, 지도 안 버튼에서는 필요한 경우 위치를 다시 찾는다
 function locate() {
-  const buttons = [document.getElementById('mapLocateButton')].filter(Boolean);
+  const buttons = [document.getElementById('mapLocateButton'), document.getElementById('myLocationSearchButton')].filter(Boolean);
   // 위치를 못 찾으면: 이미 알던 내 위치가 있으면 그대로 두고, 없으면 기본 위치(여의도)를 보여 준다
   const fallback = err => {
     if (err) showMapToast(locationErrorMessage(err));
@@ -292,6 +397,23 @@ function locate() {
 
 document.getElementById('radiusSelect').addEventListener('change', e => { radius = Number(e.target.value); loadAt(searchPoint.lat, searchPoint.lng, searchIsCurrent); });
 document.getElementById('mapLocateButton').addEventListener('click', focusMyLocation);
+// 위쪽 버튼: 위치를 새로 찾고 그 자리에서 다시 검색한다 (지도 안 ⌖ 버튼은 이동만 함)
+document.getElementById('myLocationSearchButton').addEventListener('click', () => locate());
+document.getElementById('filterKeyword').addEventListener('input', e => {
+  filters.keyword = e.target.value.trim().toLowerCase();
+  renderGatherings();
+});
+document.getElementById('filterOpenOnly').addEventListener('change', e => {
+  filters.openOnly = e.target.checked;
+  renderGatherings();
+});
+document.getElementById('filterTags').addEventListener('click', e => {
+  const chip = e.target.closest('.filter-chip');
+  if (!chip) return;
+  filters.tag = chip.dataset.tag;
+  renderTagFilter();
+  renderGatherings();
+});
 
 /* 지도 크게 보기: 지도와 검색 결과 목록을 화면 전체로 펼치고, 지도 크기를 다시 계산한 뒤 보던 위치를 유지한다 */
 function setMapExpanded(expanded) {
@@ -322,6 +444,8 @@ if (window.kakao?.maps) {
     kakao.maps.event.addListener(map, 'click', () => { openInfo?.setMap(null); openInfo = null; document.querySelectorAll('.meetup-item.is-selected').forEach(el => el.classList.remove('is-selected')); });
     kakao.maps.event.addListener(map, 'idle', () => { updateLocateButton(); updateResearchButton(); });
     kakao.maps.event.addListener(map, 'dragend', () => { userMovedMap = true; updateResearchButton(); });
+    // 깃발이 떠 있으면 끌거나 확대·축소하는 동안에도 지도 가운데를 따라가게 한다
+    kakao.maps.event.addListener(map, 'center_changed', () => { if (researchFlag?.getMap()) researchFlag.setPosition(map.getCenter()); });
     document.getElementById('researchButton').addEventListener('click', researchHere);
     locate();
   });
