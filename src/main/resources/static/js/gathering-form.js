@@ -387,6 +387,6 @@ updateEndHint();
 document.querySelector('form').addEventListener('submit', e => {
   if (!$('latitude').value) {
     e.preventDefault();
-    alert('검색 결과를 선택하거나 지도에서 모임 장소를 클릭해 주세요.');
+    alert('모임 장소를 선택해 주세요. 장소를 검색해 고르거나 지도에서 위치를 눌러 주세요.');
   }
 });

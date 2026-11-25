@@ -19,6 +19,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -26,7 +27,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Predicate;
 
@@ -109,8 +112,34 @@ public class GatheringPageController {
         model.addAttribute("tags", ActivityTag.values());
         model.addAttribute("f", values);
         model.addAttribute("editId", editId);
-        if (errors != null) model.addAttribute("errors", errors);
+        if (errors != null) model.addAttribute("errors", friendly(errors));
         return "gathering/new";
+    }
+
+    /** 형식이 틀린 값(숫자 칸에 글자 등)일 때 보여 줄 안내. 위도·경도는 지도에서 고르는 값이라 장소 선택 안내로 바꾼다 */
+    private static final Map<String, String> TYPE_MISMATCH = Map.of(
+            "latitude", GatheringCreateRequest.PLACE_REQUIRED,
+            "longitude", GatheringCreateRequest.PLACE_REQUIRED,
+            "tag", "활동 종류를 다시 골라 주세요.",
+            "startAt", "시작 시간을 다시 골라 주세요.",
+            "durationMinutes", "진행 시간을 다시 골라 주세요.",
+            "maxPeople", "정원은 숫자로 적어 주세요.");
+
+    /**
+     * 화면에 보여 줄 오류 문구로 정리한다.
+     * 스프링 기본 문구(영어·형식 변환 오류)가 그대로 나가지 않게 바꾸고, 같은 문구는 한 번만 보여 준다
+     * (위도·경도가 같이 비면 "장소를 선택해 주세요"가 두 번 나오지 않게).
+     */
+    private static List<ObjectError> friendly(List<ObjectError> errors) {
+        Map<String, ObjectError> unique = new LinkedHashMap<>();
+        for (ObjectError e : errors) {
+            String message = e.getDefaultMessage();
+            if (e instanceof FieldError fe && fe.isBindingFailure()) {
+                message = TYPE_MISMATCH.getOrDefault(fe.getField(), "입력한 값을 다시 확인해 주세요.");
+            }
+            unique.putIfAbsent(message, new ObjectError(e.getObjectName(), message));
+        }
+        return new ArrayList<>(unique.values());
     }
 
     @GetMapping("/gatherings/{id}")

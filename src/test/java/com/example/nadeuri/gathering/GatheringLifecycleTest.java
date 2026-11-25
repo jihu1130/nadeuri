@@ -163,6 +163,26 @@ class GatheringLifecycleTest {
     }
 
     @Test
+    void 장소를_고르지_않거나_이상한_값이면_장소를_선택하라는_안내를_한_번만_보여준다() throws Exception {
+        User host = user("장소없음");
+        String start = Times.now().plusDays(2).toLocalDate() + "T10:00";
+        // 위도·경도 없음 / 빈 값 / 숫자가 아님 / 범위 밖
+        String[][] cases = {{null, null}, {"", ""}, {"abc", "xyz"}, {"999", "127.0"}};
+        for (String[] c : cases) {
+            var req = post("/gatherings").with(oauth2Login().oauth2User(login(host))).with(csrf())
+                    .param("title", "장소 없음").param("tag", "WALK").param("placeName", "장소")
+                    .param("startAt", start).param("durationMinutes", "120").param("maxPeople", "6");
+            if (c[0] != null) req.param("latitude", c[0]).param("longitude", c[1]);
+            String html = mvc.perform(req).andExpect(status().isOk())
+                    .andExpect(content().string(not(containsString("널이어서는"))))
+                    .andExpect(content().string(not(containsString("Failed to convert"))))
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(html.split("모임 장소를 선택해 주세요", -1)).as("안내는 한 번만: %s", (Object) c).hasSize(2);
+        }
+        assertThat(service.hostedBy(host.getId())).isEmpty();
+    }
+
+    @Test
     void 장소_이름이_너무_길면_오류_화면_대신_다시_입력받는다() throws Exception {
         User host = user("긴장소");
         String start = Times.now().plusDays(2).toLocalDate() + "T10:00";
