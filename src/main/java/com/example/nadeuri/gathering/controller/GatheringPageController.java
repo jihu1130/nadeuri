@@ -6,6 +6,7 @@ import com.example.nadeuri.gathering.dto.GatheringCreateRequest;
 import com.example.nadeuri.gathering.dto.GatheringFormView;
 import com.example.nadeuri.gathering.dto.ParticipantView;
 import com.example.nadeuri.gathering.exception.AlreadyJoinedException;
+import com.example.nadeuri.gathering.exception.GatheringLimitException;
 import com.example.nadeuri.gathering.exception.NotHostException;
 import com.example.nadeuri.gathering.service.GatheringService;
 import com.example.nadeuri.global.security.LoginUser;
@@ -41,13 +42,17 @@ public class GatheringPageController {
     private final WeatherService weatherService;
 
     @GetMapping("/")
-    public String home() {
+    public String home(Model model) {
+        model.addAttribute("tags", ActivityTag.values()); // 검색 결과 필터의 활동 종류 버튼
         return "index";
     }
 
     @GetMapping("/gatherings/new")
-    public String newForm(Model model) {
-        return form(model, GatheringFormView.empty(), null, null);
+    public String newForm(Model model, @AuthenticationPrincipal LoginUser user) {
+        // 이미 최대 개수만큼 열어 두었으면 화면을 열 때 미리 알려 준다 (저장할 때도 다시 막음)
+        List<ObjectError> errors = service.canCreate(user.getId()) ? null
+                : List.of(new ObjectError("gathering", new GatheringLimitException().getMessage()));
+        return form(model, GatheringFormView.empty(), null, errors);
     }
 
     @PostMapping("/gatherings")
@@ -56,8 +61,12 @@ public class GatheringPageController {
         if (binding.hasErrors()) {
             return form(model, GatheringFormView.from(req), null, binding.getAllErrors());
         }
-        Gathering g = service.create(req, user.getId());
-        return "redirect:/gatherings/" + g.getPublicId();
+        try {
+            Gathering g = service.create(req, user.getId());
+            return "redirect:/gatherings/" + g.getPublicId();
+        } catch (GatheringLimitException e) {
+            return form(model, GatheringFormView.from(req), null, List.of(new ObjectError("gathering", e.getMessage())));
+        }
     }
 
     /** 모임 수정 화면: 만들기 화면을 그대로 쓰고 저장된 값을 채워 넣는다 (주최자만, 시작 전에만) */

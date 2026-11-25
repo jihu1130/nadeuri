@@ -318,15 +318,21 @@ window.kakao?.maps && kakao.maps.load(() => {
     weatherPicker.load(latlng.getLat(), latlng.getLng(), name ? `선택한 장소 · ${name}` : '선택한 장소');
   }
 
-  // 지도 클릭 → 그 위치의 주소를 장소 이름 칸에 채움 (이미 입력한 이름은 유지)
+  // 지도 클릭 → 그 위치의 주소를 장소 검색 칸에 채움 (모임 장소 이름은 직접 적도록 건드리지 않음)
+  let clickNo = 0;
   kakao.maps.event.addListener(map, 'click', e => {
     const latlng = e.latLng;
+    const no = ++clickNo;
     choose(latlng);
+    $('searchResults').innerHTML = '';
+    $('placeSearch').value = '';
+    $('placeSearch').placeholder = '주소 찾는 중…';
     geocoder.coord2Address(latlng.getLng(), latlng.getLat(), (result, status) => {
-      if (status === kakao.maps.services.Status.OK && !$('placeName').value) {
-        const a = result[0].road_address || result[0].address;
-        $('placeName').value = a.address_name;
-      }
+      if (no !== clickNo) return; // 그새 다른 곳을 눌렀으면 무시
+      $('placeSearch').placeholder = '장소 검색 (예: 여의도 한강공원)';
+      if (status !== kakao.maps.services.Status.OK) return;
+      const a = result[0].road_address || result[0].address;
+      $('placeSearch').value = a.address_name;
     });
   });
 

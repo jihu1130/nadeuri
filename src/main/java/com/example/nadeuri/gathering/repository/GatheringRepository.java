@@ -87,4 +87,12 @@ public interface GatheringRepository extends JpaRepository<Gathering, Long> {
             ORDER BY g.startAt
             """)
     List<Gathering> findByMember(@Param("userId") Long userId, @Param("host") boolean host);
+
+    /** 이 회원이 만든 모임 중 아직 끝나지 않은(예정·진행 중) 모임 수 */
+    @Query("""
+            SELECT COUNT(g) FROM Gathering g
+            WHERE g.endAt > :now
+              AND g.id IN (SELECT p.gatheringId FROM Participant p WHERE p.userId = :userId AND p.host = true)
+            """)
+    long countActiveHostedBy(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 }

@@ -13,7 +13,9 @@ public enum ActivityTag {
     PET("반려동물", "🐕", true),
     CAFE("카페", "☕", false),
     BOARD_GAME("보드게임", "🎲", false),
-    FESTIVAL("행사/축제", "🎪", true);
+    FESTIVAL("행사/축제", "🎪", true),
+    /** 위 종류에 없는 모임. 실내·야외를 알 수 없어 비 예보 경고는 띄우지 않는다 */
+    OTHER("기타", "📌", false);
 
     private final String label;
     private final String emoji;

@@ -6,11 +6,13 @@ import com.example.nadeuri.gathering.domain.Participant;
 import com.example.nadeuri.gathering.dto.GatheringCreateRequest;
 import com.example.nadeuri.gathering.dto.ParticipantView;
 import com.example.nadeuri.gathering.exception.AlreadyJoinedException;
+import com.example.nadeuri.gathering.exception.GatheringLimitException;
 import com.example.nadeuri.gathering.exception.GatheringNotFoundException;
 import com.example.nadeuri.gathering.exception.NotHostException;
 import com.example.nadeuri.gathering.repository.GatheringRepository;
 import com.example.nadeuri.gathering.repository.ParticipantRepository;
 import com.example.nadeuri.global.util.Times;
+import com.example.nadeuri.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,8 +31,11 @@ public class GatheringService {
     private static final double METERS_PER_DEGREE = 111_320.0;
     /** 주변 검색 한 번에 돌려주는 최대 모임 수 */
     public static final int MAX_NEARBY_RESULTS = 200;
+    /** 한 사람이 동시에 열어 둘 수 있는 모임 수 (끝나지 않은 모임 기준. 끝난 모임은 세지 않는다) */
+    public static final int MAX_ACTIVE_HOSTED = 5;
 
     private final GatheringRepository repository;
+    private final UserRepository userRepository;
     private final ParticipantRepository participantRepository;
     private final ChatMessageRepository chatMessageRepository;
 
@@ -91,8 +96,22 @@ public class GatheringService {
                 && participantRepository.existsByGatheringIdAndUserId(gatheringId, userId);
     }
 
+    /** 새 모임을 더 만들 수 있는지 (만들기 화면을 열 때 미리 알려 주는 용도) */
+    public boolean canCreate(Long userId) {
+        return repository.countActiveHostedBy(userId, Times.now()) < MAX_ACTIVE_HOSTED;
+    }
+
+    /**
+     * 모임 만들기. 끝나지 않은 모임을 이미 MAX_ACTIVE_HOSTED개 만든 사람은 막는다.
+     * 회원 행을 쓰기 잠금으로 먼저 잡아서, 같은 사람이 동시에 여러 번 만들어도 개수 확인이 한 줄로 처리된다.
+     * @throws GatheringLimitException 이미 최대 개수만큼 만든 경우
+     */
     @Transactional
     public Gathering create(GatheringCreateRequest req, Long hostUserId) {
+        userRepository.lockById(hostUserId);
+        if (repository.countActiveHostedBy(hostUserId, Times.now()) >= MAX_ACTIVE_HOSTED) {
+            throw new GatheringLimitException();
+        }
         Gathering g = repository.save(req.toEntity());
         participantRepository.save(new Participant(g.getId(), hostUserId, true));
         return g;

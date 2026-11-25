@@ -99,7 +99,10 @@
             <input type="search" id="filterKeyword" placeholder="모임 이름·장소 검색" aria-label="모임 이름이나 장소로 검색" autocomplete="off">
           </label>
           <div class="filter-row">
-            <div class="filter-tags" id="filterTags" role="group" aria-label="활동 종류"></div>
+            <div class="filter-tags" id="filterTags" role="group" aria-label="활동 종류">
+              <button type="button" class="filter-chip is-active" data-tag="" aria-pressed="true">전체<span class="filter-chip-count">0</span></button>
+              <button type="button" class="filter-chip" th:each="t : ${tags}" th:data-tag="${t.name()}" aria-pressed="false"><span th:text="${t.emoji + ' ' + t.label}">🚶 산책</span><span class="filter-chip-count">0</span></button>
+            </div>
             <label class="filter-open"><input type="checkbox" id="filterOpenOnly"> 모집 중만</label>
           </div>
         </div>

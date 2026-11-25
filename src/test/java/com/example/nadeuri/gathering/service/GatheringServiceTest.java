@@ -23,13 +23,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GatheringServiceTest {
 
     // 참여 기록은 users 테이블과 FK로 묶여 있지 않아 임의의 회원 ID로 테스트한다
-    private static final long HOST_ID = 999L;
+    // 한 사람당 열 수 있는 모임 수 제한(5개)에 걸리지 않도록 모임마다 다른 주최자 ID를 쓴다
+    private static final java.util.concurrent.atomic.AtomicLong HOST_IDS = new java.util.concurrent.atomic.AtomicLong(900_000L);
 
     @Autowired GatheringService service;
 
     private Gathering create(double lat, double lng, int max) {
         return service.create(new GatheringCreateRequest("테스트", null, ActivityTag.WALK, "장소",
-                lat, lng, Times.now().plusDays(1), 120, max), HOST_ID);
+                lat, lng, Times.now().plusDays(1), 120, max), HOST_IDS.incrementAndGet());
     }
 
     @Test

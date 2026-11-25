@@ -74,7 +74,10 @@ label { display: block; margin: 18px 0 7px; color: #454238; font-size: 13px; fon
 .section-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
 .discover-controls { display: flex; align-items: center; gap: 8px; }
 .radius-control { display: inline-flex; min-height: 40px; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: #92741b; font-size: 12px; }
-.radius-control { color: #92741b; }
+/* 옆의 "내 위치에서 다시 검색" 버튼과 높이·줄을 맞춘다 (label 기본 여백 제거, 같은 40px 높이) */
+.radius-control { box-sizing: border-box; height: 40px; min-height: 0; margin: 0; color: #92741b; }
+.radius-control .select-menu.is-compact .select-menu-trigger { min-height: 0; height: 38px; }
+.locate-search-button { box-sizing: border-box; height: 40px; min-height: 0; }
 .radius-control select { width: auto; min-height: 38px; padding: 0; border: 0; outline: 0; background: transparent; color: #514b3c; font-size: 12px; }
 .discover-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, .85fr); gap: 15px; align-items: stretch; }
 .map-panel, .meetup-panel, .card { min-width: 0; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); }
@@ -435,5 +438,6 @@ body.map-expanded { overflow: hidden; }
 .filter-chip:focus-visible { outline: 3px solid rgba(225,184,49,.5); outline-offset: 1px; }
 .filter-chip-count { color: #9a937f; font-size: 10px; font-weight: 700; }
 .filter-chip.is-active .filter-chip-count { color: #6b5512; }
+.filter-chip.is-empty:not(.is-active) { color: #aaa493; background: #fcfbf8; }
 .filter-open { display: inline-flex; flex: none; align-items: center; gap: 5px; padding-top: 5px; color: #5e594d; font-size: 11px; font-weight: 650; white-space: nowrap; cursor: pointer; }
 .filter-open input { width: 14px; height: 14px; min-height: 0; margin: 0; padding: 0; accent-color: #d9a91f; cursor: pointer; }

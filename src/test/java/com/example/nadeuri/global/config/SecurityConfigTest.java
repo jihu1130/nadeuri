@@ -29,9 +29,12 @@ class SecurityConfigTest {
     @Autowired MockMvc mvc;
     @Autowired GatheringService service;
 
+    // 한 사람당 모임 수 제한에 걸리지 않도록 모임마다 다른 주최자 ID
+    private static final java.util.concurrent.atomic.AtomicLong HOST_IDS = new java.util.concurrent.atomic.AtomicLong(910_000L);
+
     private Gathering gathering() {
         return service.create(new GatheringCreateRequest("테스트", null, ActivityTag.WALK, "장소",
-                37.5, 127.0, Times.now().plusDays(1), 120, 5), 999L);
+                37.5, 127.0, Times.now().plusDays(1), 120, 5), HOST_IDS.incrementAndGet());
     }
 
     @Test

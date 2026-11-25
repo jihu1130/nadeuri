@@ -171,20 +171,19 @@ function matchesFilter(g) {
   return true;
 }
 
-// 활동 종류 버튼: 지금 결과에 있는 종류만, 많은 순으로 보여 준다
+// 활동 종류 버튼: 모든 종류를 늘 보여 주고(서버가 그려 둠), 종류별 개수와 고른 버튼만 바꾼다.
+// 지금 결과에 없는 종류는 흐리게 보이지만 누를 수는 있다.
 function renderTagFilter() {
-  const counts = new Map();
-  gatherings.forEach(g => {
-    const c = counts.get(g.tag) || { label: g.tagLabel, emoji: g.emoji, n: 0 };
-    c.n++;
-    counts.set(g.tag, c);
+  const counts = {};
+  gatherings.forEach(g => { counts[g.tag] = (counts[g.tag] || 0) + 1; });
+  document.querySelectorAll('#filterTags .filter-chip').forEach(chip => {
+    const tag = chip.dataset.tag;
+    const n = tag ? (counts[tag] || 0) : gatherings.length;
+    chip.querySelector('.filter-chip-count').textContent = n;
+    chip.classList.toggle('is-empty', tag !== '' && n === 0);
+    chip.classList.toggle('is-active', filters.tag === tag);
+    chip.setAttribute('aria-pressed', String(filters.tag === tag));
   });
-  if (filters.tag && !counts.has(filters.tag)) filters.tag = ''; // 고른 종류가 새 결과에 없으면 전체로
-  const chip = (tag, text, n) =>
-    `<button type="button" class="filter-chip${filters.tag === tag ? ' is-active' : ''}" data-tag="${esc(tag)}" aria-pressed="${filters.tag === tag}">${text}<span class="filter-chip-count">${n}</span></button>`;
-  document.getElementById('filterTags').innerHTML = chip('', '전체', gatherings.length)
-    + [...counts].sort((a, b) => b[1].n - a[1].n)
-        .map(([tag, c]) => chip(tag, `${esc(c.emoji)} ${esc(c.label)}`, c.n)).join('');
 }
 
 function resetFilters() {

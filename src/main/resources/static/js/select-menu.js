@@ -153,7 +153,17 @@
     });
     list.addEventListener('focusout', e => { if (!wrap.contains(e.relatedTarget)) close(false); });
     document.addEventListener('pointerdown', e => { if (!wrap.contains(e.target)) close(false); });
-    // 라벨을 누르거나 코드가 값을 바꿔도 화면이 맞도록
+    // 연결된 라벨을 누르면 브라우저가 숨겨 둔 기본 <select> 목록을 열어 버리므로(크롬),
+    // 기본 동작을 막고 꾸민 목록을 대신 연다. (라벨 안의 꾸민 버튼을 누른 경우는 버튼이 직접 처리)
+    [...(select.labels || [])].forEach(label => label.addEventListener('click', e => {
+      if (wrap.contains(e.target)) return;
+      e.preventDefault();
+      trigger.focus({ preventScroll: true });
+      open();
+    }));
+    // 숨긴 <select>가 직접 눌리거나 열리려 하면 막는다
+    select.addEventListener('mousedown', e => { e.preventDefault(); trigger.focus(); open(); });
+    // 코드가 값을 바꾸거나 포커스가 와도 화면이 맞도록
     select.addEventListener('focus', () => trigger.focus());
     select.addEventListener('change', render);
     select.addEventListener('invalid', () => wrap.classList.add('is-invalid'));
