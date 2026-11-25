@@ -34,3 +34,4 @@
 1. Update `doc/ai/claude.md` → "State", "External API status", "Next candidates", append to "Session log".
 2. Write/append `doc/user/YYMMDD.md` (Korean, for the owner): what was done, technologies used, decisions and why, how to verify, next steps.
 3. Update `README.md` if setup, structure, API, or roadmap changed.
+4. **Any user-visible feature added or changed → add/update its row in README `## 주요 기능` table.** The in-site AI helper reads that table verbatim (`assistant/service/SiteGuide`, copied into the build by `processResources`), so write it for users: plain Korean, real menu/button names, limits users hit. Keep the `| 기능 | 설명 |` table shape (`SiteGuideTest` checks it). No setup/dev details there.

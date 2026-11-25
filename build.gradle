@@ -46,3 +46,10 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// AI 도우미가 README의 "주요 기능" 표를 읽을 수 있게 classpath(assistant/README.md)에 함께 넣는다 (SiteGuide)
+tasks.named('processResources') {
+    from('README.md') {
+        into 'assistant'
+    }
+}
