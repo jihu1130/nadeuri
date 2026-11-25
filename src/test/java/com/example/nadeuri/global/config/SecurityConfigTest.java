@@ -46,6 +46,18 @@ class SecurityConfigTest {
         // 화면에서 쓰는 CSS·JS 파일은 로그인 없이 받아야 한다 (막히면 로그인 화면 HTML이 대신 내려옴)
         mvc.perform(get("/css/select-menu.css")).andExpect(status().isOk());
         mvc.perform(get("/js/select-menu.js")).andExpect(status().isOk());
+        mvc.perform(get("/images/kakao-talk.png")).andExpect(status().isOk());
+    }
+
+    @Test
+    void 로그인_안_하면_상단에_로그인과_회원가입_버튼이_보인다() throws Exception {
+        for (String page : new String[]{"/", "/login", "/signup"}) {
+            mvc.perform(get(page))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.allOf(
+                            org.hamcrest.Matchers.containsString("class=\"topbar"),
+                            org.hamcrest.Matchers.containsString("href=\"/signup\" class=\"btn btn-sm\""))));
+        }
     }
 
     @Test

@@ -76,6 +76,7 @@ public class SecurityConfig {
                                 antMatcher(HttpMethod.GET, "/api/**"),
                                 antMatcher("/css/**"),
                                 antMatcher("/js/**"),
+                                antMatcher("/images/**"),
                                 antMatcher("/favicon.ico"),
                                 antMatcher("/login"),
                                 antMatcher("/signup"),
